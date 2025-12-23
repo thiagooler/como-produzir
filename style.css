@@ -1,4 +1,4 @@
-/* ARQUIVO: style.css */
+/* ARQUIVO: style.css (V12) */
 :root {
   --bg: #f6f8fa; --card: #ffffff; --text: #24292f; --border: #d0d7de;
   --brand: #2da44e; --brand-hover: #2c974b; --accent: #0969da;
@@ -16,9 +16,13 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
   .sidebar { height: auto !important; overflow: visible !important; padding-bottom: 80px; }
 }
 
-/* FOTO */
+/* FOTO E STATUS */
 .photo-area { background: var(--photo-bg); position: relative; display: flex; align-items: center; justify-content: center; height: 100%; overflow: hidden; }
-.photo-area img { max-width: 100%; max-height: 100%; object-fit: contain; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+.photo-area img { max-width: 100%; max-height: 100%; object-fit: contain; box-shadow: 0 5px 15px rgba(0,0,0,0.1); transition: opacity 0.3s; }
+.photo-area.discarded img { opacity: 0.3; filter: grayscale(100%); }
+.discard-overlay { position: absolute; font-size: 20px; color: var(--danger); font-weight: bold; border: 2px solid var(--danger); padding: 10px 20px; border-radius: 8px; transform: rotate(-15deg); display: none; background: rgba(255,255,255,0.8); }
+.photo-area.discarded .discard-overlay { display: block; }
+
 .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.9); border: 1px solid var(--border); width: 45px; height: 45px; border-radius: 50%; font-size: 24px; cursor: pointer; color: var(--text); z-index: 10; display: flex; align-items: center; justify-content: center; transition: .2s; }
 .nav-btn:hover { background: #fff; transform: translateY(-50%) scale(1.1); }
 .nav-left { left: 15px; } .nav-right { right: 15px; }
@@ -42,20 +46,21 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 
 /* BOTÕES */
 .btn { width: 100%; padding: 15px; border-radius: 8px; border: none; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; display: block; text-align: center; text-decoration: none; }
-.btn-primary { background: var(--brand); color: white; } /* Verde Padrão */
+.btn-primary { background: var(--brand); color: white; }
 .btn-whats { background: #25D366; color: white; }
 .btn-sec { background: #f6f8fa; border: 1px solid var(--border); color: var(--text); }
-/* Botão Finalizar Específico */
 #btnFinish { background-color: var(--brand) !important; color: white !important; margin-top: 20px; }
-#btnFinish:hover { background-color: var(--brand-hover) !important; }
+
+/* Botão Dispensar */
+.btn-discard { background: white; border: 1px solid var(--danger); color: var(--danger); transition: .2s; }
+.btn-discard:hover, .btn-discard.active { background: var(--danger); color: white; }
 
 /* FOOTER */
 .sticky-footer { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid var(--border); padding: 15px 20px; z-index: 50; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -4px 12px rgba(0,0,0,0.05); }
 .total-price { font-size: 18px; font-weight: bold; }
 .digital-badge { font-size: 10px; background: #ddf4ff; color: var(--accent); padding: 2px 6px; border-radius: 4px; margin-left: 5px; }
 
-/* ESTILO DO RESUMO (CUPOM) */
+/* RESUMO */
 .receipt-line { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 14px; }
-.receipt-sub { font-size: 11px; color: #666; margin-top: 2px; }
 .receipt-total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 18px; margin-top: 15px; padding-top: 10px; border-top: 2px solid #333; }
 .receipt-entry { color: var(--brand); font-size: 14px; }

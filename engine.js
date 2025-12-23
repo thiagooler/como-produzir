@@ -1,6 +1,5 @@
-/* ARQUIVO: engine.js - Lógica Central V11 (Relatórios Detalhados) */
+/* ARQUIVO: engine.js - Lógica Central V12 (Fluxo Obrigatório & Relatório Compacto) */
 
-// Helpers
 const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const cleanName = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
 const getDim = (name) => { const m = name.match(/\d+x\d+/i); return m ? m[0].toLowerCase() : null; };
@@ -8,12 +7,11 @@ const isDigitalProduct = (n) => cleanName(n).includes('arquivo') || cleanName(n)
 const isPrintProduct = (n) => cleanName(n).includes('foto') || cleanName(n).includes('revel');
 const isFrameProduct = (n) => cleanName(n).includes('porta') || cleanName(n).includes('moldura');
 
-// Estrutura HTML Base
 const BASE_HTML = `
 <div id="view-start" class="full-screen-overlay">
     <div style="max-width:400px; margin:40px auto; text-align:center">
         <h2 style="color:var(--brand); margin-bottom:5px">Bem-vindo!</h2>
-        <p style="color:#57606a; margin-bottom:30px">Escolha como deseja prosseguir.</p>
+        <p style="color:#57606a; margin-bottom:30px">Vamos selecionar suas fotos.</p>
         <div id="startInfo" class="card-box hidden" style="background:#fffbe6; border-color:#d4a72c; text-align:left">
             <h4 style="margin:0 0 10px 0; color:#9a6700">🎁 Seus Créditos:</h4>
             <ul id="startList" style="margin:0; padding-left:20px; font-size:13px; color:#333"></ul>
@@ -29,14 +27,19 @@ const BASE_HTML = `
 
 <div id="view-gallery" class="main-container hidden">
     <div class="gallery-grid">
-        <div class="photo-area">
+        <div class="photo-area" id="photoArea">
             <button class="nav-btn nav-left" onclick="app.nav(-1)">❮</button>
             <img id="imgMain" src="">
+            <div class="discard-overlay">DESCARTADA</div>
             <button class="nav-btn nav-right" onclick="app.nav(1)">❯</button>
             <div style="position:absolute; bottom:15px; background:rgba(255,255,255,0.9); padding:4px 10px; border-radius:20px; font-size:12px; font-weight:bold" id="imgName"></div>
         </div>
         <div class="sidebar">
             <div style="text-align:center; font-size:12px; color:#57606a; margin-bottom:10px" id="counter"></div>
+            
+            <button id="btnDiscard" class="btn btn-discard" onclick="app.toggleDiscard()">🗑️ Não quero esta foto</button>
+            <div style="margin-bottom:15px; border-bottom:1px solid #eee"></div>
+
             <div id="dynamicProds"></div>
             <button id="btnFinish" class="btn hidden" onclick="app.finish()">✅ Finalizar Seleção</button>
         </div>
@@ -60,7 +63,7 @@ const BASE_HTML = `
 
 const app = {
     idx: 0,
-    sel: [],
+    sel: [], // Agora contém { extras: {}, isRemoved: bool }
     mode: 'avulso',
 
     init() {
@@ -73,10 +76,10 @@ const app = {
         this.entrada = CLIENT_DATA.entrada || 0;
 
         if(!this.fotos.length) return alert("Galeria Vazia");
-        this.sel = this.fotos.map(()=>({ extras: {} }));
+        // Inicializa estado com isRemoved: false
+        this.sel = this.fotos.map(()=>({ extras: {}, isRemoved: false }));
         
         if(this.fotos.length < 20) {
-            console.log("Galeria pequena (<20). Forçando modo avulso.");
             this.setMode('avulso');
             return;
         }
@@ -98,7 +101,20 @@ const app = {
         this.load();
     },
 
+    // --- BLOQUEIO DE NAVEGAÇÃO ---
     nav(d) {
+        // Se estiver tentando avançar (d=1)
+        if (d === 1) {
+            const current = this.sel[this.idx];
+            const hasProducts = Object.values(current.extras).reduce((a,b)=>a+b, 0) > 0;
+            const isRemoved = current.isRemoved;
+
+            if (!hasProducts && !isRemoved) {
+                alert("⚠️ ATENÇÃO:\n\nVocê precisa decidir sobre esta foto antes de continuar.\n\nSelecione um produto OU clique em 'Não quero esta foto'.");
+                return;
+            }
+        }
+
         this.idx = (this.idx + d + this.fotos.length) % this.fotos.length;
         this.load();
     },
@@ -108,6 +124,7 @@ const app = {
         document.getElementById('imgMain').src = url;
         document.getElementById('imgName').innerText = url.split('/').pop();
         document.getElementById('counter').innerText = `${this.idx + 1} / ${this.fotos.length}`;
+        
         this.updateLogic();
         
         if(this.idx === this.fotos.length - 1) document.getElementById('btnFinish').classList.remove('hidden');
@@ -154,20 +171,55 @@ const app = {
         mkGroup('Arquivos & Outros', grps['Outros']);
     },
 
+    // --- AÇÃO: DISPENSAR FOTO ---
+    toggleDiscard() {
+        const s = this.sel[this.idx];
+        s.isRemoved = !s.isRemoved;
+        if(s.isRemoved) s.extras = {}; // Zera produtos se descartar
+        this.updateLogic();
+        
+        // Se descartou, avança automático (opcional, melhora fluxo)
+        if(s.isRemoved && this.idx < this.fotos.length -1) {
+             setTimeout(() => this.nav(1), 300);
+        }
+    },
+
     chg(name, d) {
-        const extras = this.sel[this.idx].extras;
-        const cur = extras[name] || 0;
+        const s = this.sel[this.idx];
+        
+        // Se adicionou algo, remove o flag de "Descartada"
+        if(d > 0) s.isRemoved = false;
+
+        const cur = s.extras[name] || 0;
         let next = Math.max(0, cur + d);
+        
         if(isDigitalProduct(name)) next = Math.min(next, 1);
-        if(next === 0) delete extras[name];
-        else extras[name] = next;
+        if(next === 0) delete s.extras[name];
+        else s.extras[name] = next;
+        
         this.updateLogic();
     },
 
     updateLogic() {
-        const extras = this.sel[this.idx].extras;
+        const s = this.sel[this.idx];
+        const extras = s.extras;
         const hasPrint = Object.keys(extras).some(k => isPrintProduct(k) && extras[k] > 0);
 
+        // UI do Descarte
+        const btnDisc = document.getElementById('btnDiscard');
+        const photoArea = document.getElementById('photoArea');
+        
+        if(s.isRemoved) {
+            btnDisc.classList.add('active');
+            btnDisc.innerText = "❌ FOTO DESCARTADA (Clique para recuperar)";
+            photoArea.classList.add('discarded');
+        } else {
+            btnDisc.classList.remove('active');
+            btnDisc.innerText = "🗑️ Não quero esta foto";
+            photoArea.classList.remove('discarded');
+        }
+
+        // UI dos Produtos
         this.produtos.forEach(p => {
             const safe = p.nome.replace(/\s/g,'');
             const row = document.getElementById(`row_${safe}`);
@@ -175,12 +227,21 @@ const app = {
             const valSpan = document.getElementById(`val_${safe}`);
             if(!row) return;
 
+            // Se descartada, desabilita steppers visualmente
+            if(s.isRemoved) {
+                stepper.style.opacity = '0.3';
+                stepper.style.pointerEvents = 'none';
+            } else {
+                stepper.style.opacity = '1';
+                stepper.style.pointerEvents = 'auto';
+            }
+
             let val = extras[p.nome] || 0;
 
             if(isFrameProduct(p.nome)) {
                 const dim = getDim(p.nome);
                 const matching = Object.keys(extras).some(k => isPrintProduct(k) && getDim(k) === dim && extras[k] > 0);
-                if(matching) {
+                if(matching && !s.isRemoved) {
                     row.classList.remove('hidden-item');
                     row.classList.add('highlight');
                 } else {
@@ -206,8 +267,8 @@ const app = {
     calcTotal() {
         let total = 0, itemsCount = 0, summary = {};
         
-        // 1. Somatória Bruta
         this.sel.forEach(s => {
+            if(s.isRemoved) return;
             Object.entries(s.extras).forEach(([nm, qtd]) => {
                 let prd = this.produtos.find(p=>p.nome===nm);
                 if(prd) {
@@ -218,22 +279,16 @@ const app = {
             });
         });
 
-        // 2. Abatimento de Créditos (Brindes)
         let discount = 0;
-        let creditsUsed = {}; // Rastreia o que foi usado de crédito
-
         this.creditos.forEach(c => {
             if(summary[c.nome]) {
                 let free = Math.min(summary[c.nome], c.qtd);
                 let prd = this.produtos.find(p=>p.nome===c.nome);
-                if(prd && free > 0) {
-                    discount += (free * prd.preco);
-                    creditsUsed[c.nome] = free;
-                }
+                if(prd && free > 0) discount += (free * prd.preco);
             }
         });
 
-        return { total, discount, itemsCount, summary, creditsUsed };
+        return { total, discount, itemsCount, summary };
     },
 
     updateSticky() {
@@ -250,79 +305,70 @@ const app = {
         const subtotal = data.total - data.discount;
         const final = subtotal - this.entrada;
         
-        // --- GERA HTML DA TELA ---
         let html = '';
         
-        // Itens
         Object.entries(data.summary).forEach(([nm, qtd]) => {
             let prd = this.produtos.find(p=>p.nome===nm);
             let unit = prd ? prd.preco : 0;
-            let lineTotal = unit * qtd;
-            
-            html += `
-            <div class="receipt-line">
-                <div>
-                    <strong>${qtd}x ${nm}</strong>
-                    <div class="receipt-sub">${BRL(unit)} un.</div>
-                </div>
-                <div>${BRL(lineTotal)}</div>
-            </div>`;
+            html += `<div class="receipt-line"><div><strong>${qtd}x ${nm}</strong><div class="receipt-sub">${BRL(unit)} un.</div></div><div>${BRL(unit*qtd)}</div></div>`;
         });
-
-        // Abatimentos (Créditos)
-        if(data.discount > 0) {
-            html += `
-            <div class="receipt-line" style="color:var(--brand)">
-                <strong>Desconto (Créditos)</strong>
-                <strong>-${BRL(data.discount)}</strong>
-            </div>`;
-        }
-
-        // Totais
+        if(data.discount > 0) html += `<div class="receipt-line" style="color:var(--brand)"><strong>Desconto (Créditos)</strong><strong>-${BRL(data.discount)}</strong></div>`;
         html += `<div class="receipt-total-row"><span>Subtotal:</span> <span>${BRL(subtotal)}</span></div>`;
+        if(this.entrada > 0) html += `<div class="receipt-line receipt-entry"><span>Entrada Paga:</span> <span>-${BRL(this.entrada)}</span></div>`;
         
-        if(this.entrada > 0) {
-             html += `<div class="receipt-line receipt-entry"><span>Entrada Paga:</span> <span>-${BRL(this.entrada)}</span></div>`;
+        let valFinal = final < 0 ? BRL(Math.abs(final)) : BRL(final);
+        let labelFinal = final < 0 ? "CRÉDITO RESTANTE:" : "TOTAL A PAGAR:";
+        let colorFinal = final < 0 ? "var(--brand)" : "#000";
+        html += `<div style="text-align:right; font-size:22px; margin-top:10px; color:${colorFinal}"><small style="font-size:12px; color:#666; display:block">${labelFinal}</small>${valFinal}</div>`;
+
+        // --- RELATÓRIO COMPACTO WHATSAPP ---
+        // Estrutura: { "Foto 10x15": ["img1", "img2"], "REMOVIDAS": ["img5", "img9"] }
+        let report = {};
+        let removedList = [];
+
+        this.sel.forEach((s, i) => {
+            // Pega só o nome do arquivo, sem caminho
+            let fname = this.fotos[i].split('/').pop();
+            
+            if(s.isRemoved) {
+                removedList.push(fname);
+            } else {
+                Object.entries(s.extras).forEach(([prodName, qtd]) => {
+                    if(qtd > 0) {
+                        report[prodName] = report[prodName] || [];
+                        // Se for 1, só nome. Se >1, nome(2x)
+                        report[prodName].push(qtd > 1 ? `${fname}(${qtd}x)` : fname);
+                    }
+                });
+            }
+        });
+
+        let txt = `*📝 PEDIDO STUDIO NBV*\n----------------------------------\n`;
+        
+        // Lista Produtos
+        for (let [prodName, fileList] of Object.entries(report)) {
+            let totalQtd = data.summary[prodName] || 0;
+            txt += `*📌 ${prodName} (${totalQtd} un)*\n`;
+            txt += fileList.join(', ') + "\n\n";
         }
 
-        let labelFinal = final < 0 ? "CRÉDITO SOBRANDO:" : "TOTAL A PAGAR:";
-        let valFinal = final < 0 ? BRL(Math.abs(final)) : BRL(final);
-        let colorFinal = final < 0 ? "var(--brand)" : "#000";
+        // Lista Removidas (Opcional, mas útil)
+        if(removedList.length > 0) {
+            txt += `*🗑️ DESCARTADAS (${removedList.length} un)*\n`;
+            txt += removedList.join(', ') + "\n\n";
+        }
 
-        html += `<div style="text-align:right; font-size:22px; margin-top:10px; color:${colorFinal}">
-            <small style="font-size:12px; color:#666; display:block">${labelFinal}</small>
-            ${valFinal}
-        </div>`;
-
-
-        // --- GERA TEXTO WHATSAPP ---
-        let txt = `*📝 NOVO PEDIDO - STUDIO NBV*\n----------------------------------\n`;
-        
-        Object.entries(data.summary).forEach(([nm, qtd]) => {
-            let prd = this.produtos.find(p=>p.nome===nm);
-            let unit = prd ? prd.preco : 0;
-            let totalItem = unit * qtd;
-            txt += `*${nm}*\n${qtd}x de ${BRL(unit)} = ${BRL(totalItem)}\n\n`;
-        });
-        
         txt += `----------------------------------\n`;
-        txt += `*💰 RESUMO FINANCEIRO*\n`;
-        txt += `Valor dos Itens: ${BRL(data.total)}\n`;
-        
-        if(data.discount > 0) txt += `Descontos/Créditos: -${BRL(data.discount)}\n`;
-        
-        txt += `*Subtotal: ${BRL(subtotal)}*\n`;
-        
-        if(this.entrada > 0) txt += `Entrada Paga: -${BRL(this.entrada)}\n`;
-        
-        let txtFinal = final < 0 ? `CRÉDITO: ${BRL(Math.abs(final))}` : `A PAGAR: ${BRL(final)}`;
-        txt += `\n*${txtFinal}*`;
+        txt += `*💰 FINANCEIRO*\n`;
+        txt += `Itens: ${BRL(data.total)}\n`;
+        if(data.discount > 0) txt += `Descontos: -${BRL(data.discount)}\n`;
+        if(this.entrada > 0) txt += `Entrada: -${BRL(this.entrada)}\n`;
+        txt += `\n*${final < 0 ? "CRÉDITO: " : "A PAGAR: "} ${BRL(Math.abs(final))}*`;
 
-        // Troca de Tela
         document.getElementById('view-gallery').classList.add('hidden');
         document.getElementById('stickyFooter').classList.add('hidden');
         document.getElementById('view-summary').classList.remove('hidden');
-        document.getElementById('summaryContent').innerHTML = html || "Nenhum item selecionado.";
+        document.getElementById('summaryContent').innerHTML = html || "Nada selecionado.";
         document.getElementById('btnWhats').href = `https://wa.me/5542998370150?text=${encodeURIComponent(txt)}`;
     }
 };

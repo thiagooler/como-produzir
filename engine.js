@@ -1,4 +1,4 @@
-/* ARQUIVO: engine.js - Lógica Central V9 */
+/* ARQUIVO: engine.js - Lógica Central V11 (Relatórios Detalhados) */
 
 // Helpers
 const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -8,7 +8,7 @@ const isDigitalProduct = (n) => cleanName(n).includes('arquivo') || cleanName(n)
 const isPrintProduct = (n) => cleanName(n).includes('foto') || cleanName(n).includes('revel');
 const isFrameProduct = (n) => cleanName(n).includes('porta') || cleanName(n).includes('moldura');
 
-// Estrutura HTML Base (Injetada via JS)
+// Estrutura HTML Base
 const BASE_HTML = `
 <div id="view-start" class="full-screen-overlay">
     <div style="max-width:400px; margin:40px auto; text-align:center">
@@ -38,7 +38,7 @@ const BASE_HTML = `
         <div class="sidebar">
             <div style="text-align:center; font-size:12px; color:#57606a; margin-bottom:10px" id="counter"></div>
             <div id="dynamicProds"></div>
-            <button id="btnFinish" class="btn hidden" style="background:#24292f; margin-top:20px" onclick="app.finish()">✅ Finalizar Seleção</button>
+            <button id="btnFinish" class="btn hidden" onclick="app.finish()">✅ Finalizar Seleção</button>
         </div>
     </div>
 </div>
@@ -50,9 +50,8 @@ const BASE_HTML = `
 
 <div id="view-summary" class="full-screen-overlay hidden">
     <div style="max-width:500px; margin:20px auto">
-        <h2>Resumo do Pedido</h2>
+        <h2 style="text-align:center">Resumo do Pedido</h2>
         <div class="card-box" id="summaryContent"></div>
-        <div style="text-align:right; font-size:20px; font-weight:bold; margin-bottom:20px" id="finalTotal"></div>
         <a id="btnWhats" target="_blank" class="btn btn-whats">Enviar Pedido no WhatsApp</a>
         <button class="btn btn-sec" onclick="location.reload()">Voltar</button>
     </div>
@@ -65,10 +64,7 @@ const app = {
     mode: 'avulso',
 
     init() {
-        // 1. Injeta HTML
         document.body.innerHTML = BASE_HTML;
-
-        // 2. Valida Dados Globais (Vindos do index.html do cliente)
         if(typeof CLIENT_DATA === 'undefined') return alert("Erro: Dados do cliente não encontrados.");
         
         this.fotos = CLIENT_DATA.fotos;
@@ -79,7 +75,12 @@ const app = {
         if(!this.fotos.length) return alert("Galeria Vazia");
         this.sel = this.fotos.map(()=>({ extras: {} }));
         
-        // 3. Configura Tela Inicial
+        if(this.fotos.length < 20) {
+            console.log("Galeria pequena (<20). Forçando modo avulso.");
+            this.setMode('avulso');
+            return;
+        }
+
         if(this.entrada > 0 || this.creditos.length > 0) {
             document.getElementById('startInfo').classList.remove('hidden');
             const list = document.getElementById('startList');
@@ -176,7 +177,6 @@ const app = {
 
             let val = extras[p.nome] || 0;
 
-            // Lógica Porta Retrato
             if(isFrameProduct(p.nome)) {
                 const dim = getDim(p.nome);
                 const matching = Object.keys(extras).some(k => isPrintProduct(k) && getDim(k) === dim && extras[k] > 0);
@@ -188,7 +188,6 @@ const app = {
                     if(val > 0) { delete extras[p.nome]; val = 0; }
                 }
             }
-            // Lógica Digital
             if(isDigitalProduct(p.nome)) {
                 if(hasPrint) {
                     row.classList.add('hidden-item');
@@ -206,6 +205,8 @@ const app = {
 
     calcTotal() {
         let total = 0, itemsCount = 0, summary = {};
+        
+        // 1. Somatória Bruta
         this.sel.forEach(s => {
             Object.entries(s.extras).forEach(([nm, qtd]) => {
                 let prd = this.produtos.find(p=>p.nome===nm);
@@ -216,19 +217,28 @@ const app = {
                 }
             });
         });
+
+        // 2. Abatimento de Créditos (Brindes)
+        let discount = 0;
+        let creditsUsed = {}; // Rastreia o que foi usado de crédito
+
         this.creditos.forEach(c => {
             if(summary[c.nome]) {
                 let free = Math.min(summary[c.nome], c.qtd);
                 let prd = this.produtos.find(p=>p.nome===c.nome);
-                if(prd) total -= (free * prd.preco);
+                if(prd && free > 0) {
+                    discount += (free * prd.preco);
+                    creditsUsed[c.nome] = free;
+                }
             }
         });
-        return { total, itemsCount, summary };
+
+        return { total, discount, itemsCount, summary, creditsUsed };
     },
 
     updateSticky() {
         const data = this.calcTotal();
-        const final = data.total - this.entrada;
+        const final = (data.total - data.discount) - this.entrada;
         document.getElementById('stickQtd').innerText = data.itemsCount;
         const elTotal = document.getElementById('stickTotal');
         if(final < 0) elTotal.innerHTML = `Crédito: <span style="color:var(--brand)">${BRL(Math.abs(final))}</span>`;
@@ -237,30 +247,84 @@ const app = {
 
     finish() {
         const data = this.calcTotal();
-        const final = data.total - this.entrada;
-        let html = '';
-        let txtWhats = "*Novo Pedido Studio NBV*\n\n";
+        const subtotal = data.total - data.discount;
+        const final = subtotal - this.entrada;
         
+        // --- GERA HTML DA TELA ---
+        let html = '';
+        
+        // Itens
         Object.entries(data.summary).forEach(([nm, qtd]) => {
-            html += `<div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px dashed #eee"><span>${qtd}x ${nm}</span></div>`;
-            txtWhats += `${qtd}x ${nm}\n`;
+            let prd = this.produtos.find(p=>p.nome===nm);
+            let unit = prd ? prd.preco : 0;
+            let lineTotal = unit * qtd;
+            
+            html += `
+            <div class="receipt-line">
+                <div>
+                    <strong>${qtd}x ${nm}</strong>
+                    <div class="receipt-sub">${BRL(unit)} un.</div>
+                </div>
+                <div>${BRL(lineTotal)}</div>
+            </div>`;
         });
+
+        // Abatimentos (Créditos)
+        if(data.discount > 0) {
+            html += `
+            <div class="receipt-line" style="color:var(--brand)">
+                <strong>Desconto (Créditos)</strong>
+                <strong>-${BRL(data.discount)}</strong>
+            </div>`;
+        }
+
+        // Totais
+        html += `<div class="receipt-total-row"><span>Subtotal:</span> <span>${BRL(subtotal)}</span></div>`;
         
         if(this.entrada > 0) {
-            html += `<div style="color:var(--brand); margin-top:10px">Entrada Paga: -${BRL(this.entrada)}</div>`;
-            txtWhats += `\nEntrada já paga: -${BRL(this.entrada)}`;
+             html += `<div class="receipt-line receipt-entry"><span>Entrada Paga:</span> <span>-${BRL(this.entrada)}</span></div>`;
         }
+
+        let labelFinal = final < 0 ? "CRÉDITO SOBRANDO:" : "TOTAL A PAGAR:";
+        let valFinal = final < 0 ? BRL(Math.abs(final)) : BRL(final);
+        let colorFinal = final < 0 ? "var(--brand)" : "#000";
+
+        html += `<div style="text-align:right; font-size:22px; margin-top:10px; color:${colorFinal}">
+            <small style="font-size:12px; color:#666; display:block">${labelFinal}</small>
+            ${valFinal}
+        </div>`;
+
+
+        // --- GERA TEXTO WHATSAPP ---
+        let txt = `*📝 NOVO PEDIDO - STUDIO NBV*\n----------------------------------\n`;
         
-        txtWhats += `\n*TOTAL FINAL: ${BRL(final)}*`;
+        Object.entries(data.summary).forEach(([nm, qtd]) => {
+            let prd = this.produtos.find(p=>p.nome===nm);
+            let unit = prd ? prd.preco : 0;
+            let totalItem = unit * qtd;
+            txt += `*${nm}*\n${qtd}x de ${BRL(unit)} = ${BRL(totalItem)}\n\n`;
+        });
         
+        txt += `----------------------------------\n`;
+        txt += `*💰 RESUMO FINANCEIRO*\n`;
+        txt += `Valor dos Itens: ${BRL(data.total)}\n`;
+        
+        if(data.discount > 0) txt += `Descontos/Créditos: -${BRL(data.discount)}\n`;
+        
+        txt += `*Subtotal: ${BRL(subtotal)}*\n`;
+        
+        if(this.entrada > 0) txt += `Entrada Paga: -${BRL(this.entrada)}\n`;
+        
+        let txtFinal = final < 0 ? `CRÉDITO: ${BRL(Math.abs(final))}` : `A PAGAR: ${BRL(final)}`;
+        txt += `\n*${txtFinal}*`;
+
+        // Troca de Tela
         document.getElementById('view-gallery').classList.add('hidden');
         document.getElementById('stickyFooter').classList.add('hidden');
         document.getElementById('view-summary').classList.remove('hidden');
-        document.getElementById('summaryContent').innerHTML = html || "Nada selecionado.";
-        document.getElementById('finalTotal').innerText = final < 0 ? "Crédito: " + BRL(Math.abs(final)) : "A Pagar: " + BRL(final);
-        document.getElementById('btnWhats').href = `https://wa.me/5542998370150?text=${encodeURIComponent(txtWhats)}`;
+        document.getElementById('summaryContent').innerHTML = html || "Nenhum item selecionado.";
+        document.getElementById('btnWhats').href = `https://wa.me/5542998370150?text=${encodeURIComponent(txt)}`;
     }
 };
 
-// Inicia
 window.onload = () => app.init();

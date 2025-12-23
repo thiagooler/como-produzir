@@ -3,82 +3,169 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Studio NBV • Gerador GitHub</title>
+    <title>Painel Studio NBV • Master CMS</title>
     <script src="database.js"></script>
     <style>
-        :root { --brand: #238636; --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; }
-        body { font-family: monospace; background: var(--bg); color: var(--text); padding: 20px; max-width: 800px; margin: 0 auto; }
-        .card { background: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-        h2 { margin-top: 0; color: #fff; font-size: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-        label { display: block; margin-top: 10px; font-weight: bold; color: #fff; }
-        input, textarea { width: 100%; padding: 8px; margin-top: 5px; background: #010409; border: 1px solid var(--border); color: #fff; border-radius: 4px; font-family: inherit; }
-        button { background: var(--brand); color: #fff; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; }
-        button:hover { opacity: 0.9; }
-        .status { margin-top: 10px; padding: 10px; border-radius: 4px; display: none; text-align: center; }
-        .success { background: rgba(35,134,54,0.2); color: #3fb950; border: 1px solid #238636; }
-        .error { background: rgba(218,54,51,0.2); color: #f85149; border: 1px solid #da3633; }
+        :root { --brand: #238636; --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; --danger: #da3633; --warning: #d29922; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; background: var(--bg); color: var(--text); padding: 20px; max-width: 900px; margin: 0 auto; }
         
-        .config-row { display: flex; gap: 10px; }
-        .config-row > div { flex: 1; }
+        /* Layout */
+        .card { background: var(--card); border: 1px solid var(--border); padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 3px 6px rgba(0,0,0,0.2); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; }
+        h2 { margin: 0; color: #fff; font-size: 18px; display: flex; align-items: center; gap: 10px; }
+        
+        /* Forms */
+        label { display: block; margin-top: 15px; font-weight: 600; color: #fff; margin-bottom: 5px; font-size: 13px; }
+        input, textarea, select { width: 100%; padding: 10px; background: #010409; border: 1px solid var(--border); color: #fff; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px; transition: .2s; }
+        input:focus, textarea:focus { border-color: var(--brand); outline: none; }
+        
+        /* Drag & Drop */
+        .drop-zone { border: 2px dashed #30363d; border-radius: 6px; padding: 40px; text-align: center; cursor: pointer; transition: .2s; background: #0d1117; }
+        .drop-zone:hover, .drop-zone.dragover { border-color: var(--brand); background: rgba(35,134,54,0.1); }
+        .file-list { margin-top: 10px; font-size: 12px; color: #8b949e; }
+
+        /* Buttons */
+        button { padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; margin-top: 20px; border: none; transition: .2s; text-transform: uppercase; letter-spacing: 0.5px; }
+        .btn-primary { background: var(--brand); color: #fff; }
+        .btn-primary:hover { background: #2ea043; }
+        .btn-danger { background: rgba(218,54,51,0.1); color: #f85149; border: 1px solid var(--danger); }
+        .btn-danger:hover { background: var(--danger); color: white; }
+        .btn-save { background: #1f6feb; color: white; }
+        .btn-save:hover { background: #388bfd; }
+
+        /* Logs & Status */
+        .status-log { margin-top: 15px; padding: 15px; border-radius: 6px; font-size: 12px; background: #000; border: 1px solid #30363d; max-height: 200px; overflow-y: auto; white-space: pre-wrap; display: none; font-family: monospace; }
+        .final-link { background: rgba(35,134,54,0.2); border: 1px solid var(--brand); padding: 15px; margin-top: 15px; border-radius: 6px; text-align: center; display: none; }
+        .final-link a { color: #fff; font-weight: bold; font-size: 16px; text-decoration: none; }
+        .final-link a:hover { text-decoration: underline; }
+
+        /* Utils */
+        .hidden { display: none; }
+        .row { display: flex; gap: 15px; } .col { flex: 1; }
+        .chevron { transition: transform 0.3s; }
+        .collapsed .chevron { transform: rotate(-90deg); }
     </style>
 </head>
 <body>
 
-<h1>🚀 Painel de Controle - Studio NBV</h1>
+<h1>🚀 Studio NBV • Master Control</h1>
 
 <div class="card">
-    <h2>🔐 Configuração do GitHub</h2>
-    <input type="password" id="ghToken" placeholder="Token Pessoal (ghp_...)" onchange="saveConfig()">
-    <div class="config-row">
-        <div><label>Usuário GitHub</label><input type="text" id="ghUser" placeholder="ex: thiagonbv" onchange="saveConfig()"></div>
-        <div><label>Repositório</label><input type="text" id="ghRepo" placeholder="ex: galeria-clientes" onchange="saveConfig()"></div>
+    <div class="card-header" onclick="toggleSection('configArea', this)">
+        <h2>🔐 Configuração GitHub</h2>
+        <span class="chevron">▼</span>
+    </div>
+    <div id="configArea" class="hidden">
+        <label>Personal Access Token</label>
+        <input type="password" id="ghToken" placeholder="ghp_..." onchange="saveConfig()">
+        <div class="row">
+            <div class="col"><label>Usuário</label><input type="text" id="ghUser" onchange="saveConfig()"></div>
+            <div class="col"><label>Repositório</label><input type="text" id="ghRepo" onchange="saveConfig()"></div>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="border-left: 4px solid #1f6feb;">
+    <div class="card-header" onclick="toggleSection('dbEditorArea', this)">
+        <h2>💰 Configurar Preços e Produtos</h2>
+        <span class="chevron">▼</span>
+    </div>
+    <div id="dbEditorArea" class="hidden">
+        <p style="font-size:12px; color:#8b949e; margin-bottom:15px">
+            Edite os JSONs abaixo com cuidado. Ao salvar, o arquivo <code>database.js</code> será atualizado no GitHub.
+        </p>
+
+        <label>Lista de Produtos (Avulsos)</label>
+        <textarea id="jsonProds" rows="8"></textarea>
+
+        <label>Tabela de Fotolivros (Regras de Cálculo)</label>
+        <textarea id="jsonCalculo" rows="8"></textarea>
+        
+        <label>Configuração Padrão do Álbum (Incluso/Extra)</label>
+        <div class="row">
+            <div class="col"><input type="number" id="dbIncluso" placeholder="Qtd Inclusa"></div>
+            <div class="col"><input type="number" id="dbExtra" placeholder="R$ Extra"></div>
+        </div>
+
+        <button class="btn-save" onclick="updateDatabaseFile()">💾 SALVAR NOVO TABELAMENTO</button>
     </div>
 </div>
 
 <div class="card">
-    <h2>👤 Dados do Cliente</h2>
-    <label>Nome do Cliente (Será o link: /clientes/nome-cliente)</label>
-    <input type="text" id="clientName" placeholder="ex: maria-formatura">
-    
-    <label>Links das Fotos (um por linha)</label>
-    <textarea id="photos" rows="5" placeholder="https://..."></textarea>
+    <div class="card-header" onclick="toggleSection('galleryArea', this)">
+        <h2>📸 Nova Galeria de Cliente</h2>
+        <span class="chevron">▼</span>
+    </div>
+    <div id="galleryArea">
+        <label>Nome do Cliente (URL Amigável)</label>
+        <input type="text" id="clientName" placeholder="ex: maria-15anos">
+        
+        <label>Fotos</label>
+        <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <p>📂 Arraste as fotos ou clique aqui</p>
+            <p style="font-size:11px; color:#8b949e">As fotos ficarão na pasta <code>/clientes/nome/</code></p>
+        </div>
+        <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="handleFiles(this.files)">
+        <div id="fileList" class="file-list"></div>
+
+        <div class="row">
+            <div class="col"><label>Fotos Inclusas</label><input type="number" id="albIncluso"></div>
+            <div class="col"><label>Valor Extra</label><input type="number" id="albExtra"></div>
+            <div class="col"><label>Entrada (Sinal)</label><input type="number" id="valEntrada" value="0"></div>
+        </div>
+
+        <button class="btn-primary" onclick="processAndDeploy()">🚀 CRIAR E PUBLICAR</button>
+    </div>
 </div>
 
-<div class="card">
-    <h2>⚙️ Ajustes do Pedido (Carregado do Database.js)</h2>
-    <div class="config-row">
-        <div><label>Fotos Inclusas no Album</label><input type="number" id="albIncluso"></div>
-        <div><label>Valor Extra Album</label><input type="number" id="albExtra"></div>
+<div class="card" style="border-color: #da3633">
+    <div class="card-header" onclick="toggleSection('cleanupArea', this)">
+        <h2 style="color:#f85149">🧹 Manutenção</h2>
+        <span class="chevron">▼</span>
     </div>
-    <div class="config-row">
-        <div><label>Entrada (Sinal)</label><input type="number" id="valEntrada" value="0"></div>
+    <div id="cleanupArea" class="hidden">
+        <p style="font-size:13px; color:#8b949e">Remove pastas antigas (+60 dias) para liberar espaço.</p>
+        <button class="btn-danger" onclick="runCleanup()">🗑️ EXECUTAR LIMPEZA</button>
     </div>
-    <label>Créditos Especiais (JSON)</label>
-    <textarea id="jsonCredits" rows="2"></textarea>
 </div>
 
-<button onclick="deploy()">CRIAR GALERIA E PUBLICAR 🌍</button>
-
-<div id="statusBox" class="status"></div>
-<div id="finalLink" class="status success" style="margin-top:10px"></div>
+<div id="statusLog" class="status-log"></div>
+<div id="finalLink" class="final-link"></div>
 
 <script>
-    // 1. Carregar Configurações Iniciais
+    let selectedFiles = [];
+
+    // --- INIT ---
     window.onload = () => {
-        // Carrega do LocalStorage (GitHub Info)
+        // Load GitHub Config
         if(localStorage.getItem('ghToken')) document.getElementById('ghToken').value = localStorage.getItem('ghToken');
         if(localStorage.getItem('ghUser')) document.getElementById('ghUser').value = localStorage.getItem('ghUser');
         if(localStorage.getItem('ghRepo')) document.getElementById('ghRepo').value = localStorage.getItem('ghRepo');
 
-        // Carrega do Database.js (Preços)
+        // Load DB Config into Generator Inputs
         if(typeof DB_CONFIG !== 'undefined') {
             document.getElementById('albIncluso').value = DB_CONFIG.album.incluso;
             document.getElementById('albExtra').value = DB_CONFIG.album.extra;
-            document.getElementById('jsonCredits').value = JSON.stringify(DB_CONFIG.creditos);
-        } else {
-            alert("Erro: database.js não encontrado!");
+            
+            // Populate Editor Inputs
+            document.getElementById('jsonProds').value = JSON.stringify(DB_CONFIG.produtos, null, 4);
+            document.getElementById('jsonCalculo').value = JSON.stringify(DB_CONFIG.calculo, null, 4);
+            document.getElementById('dbIncluso').value = DB_CONFIG.album.incluso;
+            document.getElementById('dbExtra').value = DB_CONFIG.album.extra;
         }
     };
+
+    function toggleSection(id, header) {
+        const el = document.getElementById(id);
+        const isHidden = el.classList.contains('hidden');
+        if(isHidden) {
+            el.classList.remove('hidden');
+            header.classList.remove('collapsed');
+        } else {
+            el.classList.add('hidden');
+            header.classList.add('collapsed');
+        }
+    }
 
     function saveConfig() {
         localStorage.setItem('ghToken', document.getElementById('ghToken').value);
@@ -86,99 +173,218 @@
         localStorage.setItem('ghRepo', document.getElementById('ghRepo').value);
     }
 
-    function showStatus(msg, type) {
-        const el = document.getElementById('statusBox');
+    function log(msg) {
+        const el = document.getElementById('statusLog');
         el.style.display = 'block';
-        el.className = 'status ' + type;
-        el.innerText = msg;
+        el.innerText += `> ${msg}\n`;
+        el.scrollTop = el.scrollHeight;
     }
 
-    // Função para codificar UTF-8 em Base64 corretamente (evita erro de acentuação)
-    function utf8_to_b64(str) {
-        return window.btoa(unescape(encodeURIComponent(str)));
-    }
+    function utf8_to_b64(str) { return window.btoa(unescape(encodeURIComponent(str))); }
+    const fileToBase64 = file => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result.split(',')[1]); 
+        reader.onerror = error => reject(error);
+    });
 
-    async function deploy() {
+    // --- DATABASE UPDATE LOGIC ---
+    async function updateDatabaseFile() {
         const token = document.getElementById('ghToken').value;
         const user = document.getElementById('ghUser').value;
         const repo = document.getElementById('ghRepo').value;
-        const clientName = document.getElementById('clientName').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
-        
-        if(!token || !user || !repo || !clientName) return alert("Preencha todos os campos!");
 
-        showStatus("⏳ Lendo template e gerando arquivo...", "success");
+        if(!token) return alert("Configure o Token do GitHub primeiro!");
 
         try {
-            // 1. Ler o Template.html
-            const response = await fetch('template.html');
-            if(!response.ok) throw new Error("Não foi possível ler o template.html");
-            let htmlContent = await response.text();
-
-            // 2. Preparar Dados
-            const fotosArr = document.getElementById('photos').value.split('\n').filter(x=>x.trim()).map(x=>`"${x.trim()}"`).join(',');
-            const creditsArr = document.getElementById('jsonCredits').value || "[]";
+            // 1. Validar JSONs
+            const newProds = JSON.parse(document.getElementById('jsonProds').value);
+            const newCalc = JSON.parse(document.getElementById('jsonCalculo').value);
+            const newInc = parseFloat(document.getElementById('dbIncluso').value);
+            const newExt = parseFloat(document.getElementById('dbExtra').value);
             
-            // Usamos os dados do input, mas a tabela de preços vem do DB_CONFIG global
+            // 2. Reconstruir Objeto
+            const newDB = {
+                album: { incluso: newInc, extra: newExt },
+                calculo: newCalc,
+                produtos: newProds,
+                creditos: (typeof DB_CONFIG !== 'undefined' ? DB_CONFIG.creditos : []) // Mantém créditos existentes
+            };
+
+            // 3. Criar String do Arquivo JS
+            const fileContent = `// Configuração Central de Preços e Produtos - Studio NBV\nconst DB_CONFIG = ${JSON.stringify(newDB, null, 4)};`;
+            
+            log("💾 Atualizando database.js no GitHub...");
+
+            // 4. Buscar SHA atual
+            const apiUrl = `https://api.github.com/repos/${user}/${repo}/contents/database.js`;
+            const check = await fetch(apiUrl, { headers: { Authorization: `token ${token}` } });
+            if(!check.ok) throw new Error("Erro ao localizar database.js no repo.");
+            const data = await check.json();
+
+            // 5. Commit
+            const res = await fetch(apiUrl, {
+                method: 'PUT',
+                headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: "Update Prices via Panel",
+                    content: utf8_to_b64(fileContent),
+                    sha: data.sha,
+                    branch: "main"
+                })
+            });
+
+            if(!res.ok) throw new Error("Falha ao salvar.");
+            
+            log("✅ Preços atualizados com sucesso!");
+            alert("Preços atualizados! Recarregue a página para aplicar as mudanças no gerador.");
+            location.reload();
+
+        } catch (e) {
+            alert("Erro: Verifique a sintaxe JSON. " + e.message);
+            log("❌ Erro ao salvar DB: " + e.message);
+        }
+    }
+
+    // --- GALLERY GENERATOR LOGIC ---
+    const dropZone = document.getElementById('dropZone');
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+
+    function handleFiles(files) {
+        selectedFiles = Array.from(files);
+        document.getElementById('fileList').innerText = `${selectedFiles.length} arquivos prontos.`;
+    }
+
+    async function processAndDeploy() {
+        const token = document.getElementById('ghToken').value;
+        const user = document.getElementById('ghUser').value;
+        const repo = document.getElementById('ghRepo').value;
+        const clientRaw = document.getElementById('clientName').value;
+        const clientName = clientRaw.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+
+        if(!token || !clientName || selectedFiles.length === 0) return alert("Preencha tudo!");
+
+        document.getElementById('statusLog').innerText = "";
+        document.getElementById('finalLink').style.display = 'none';
+
+        try {
+            log("🚀 Iniciando Upload...");
+
+            // A. Upload Photos
+            const fileNames = [];
+            for (const file of selectedFiles) {
+                log(`📤 Enviando: ${file.name}`);
+                const content = await fileToBase64(file);
+                const path = `clientes/${clientName}/${file.name}`;
+                
+                // Check existing
+                let sha = null;
+                try {
+                    const c = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`, { headers: { Authorization: `token ${token}` }});
+                    if(c.ok) sha = (await c.json()).sha;
+                } catch(e){}
+
+                await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: `Img ${clientName}`, content: content, sha: sha, branch: "main" })
+                });
+                fileNames.push(file.name);
+            }
+
+            // B. Generate HTML
+            log("⚙️ Gerando Galeria...");
+            const tplRes = await fetch('template.html');
+            if(!tplRes.ok) throw new Error("Template.html faltando!");
+            let html = await tplRes.text();
+
+            // Prepare Data Injection
+            const fotosJs = fileNames.map(u => `"${u}"`).join(',');
+            // Usa inputs atuais para configuração do álbum específico
+            const albumConf = { incluso: document.getElementById('albIncluso').value, extra: document.getElementById('albExtra').value };
+            
             const injection = `
-            let fotos = [${fotosArr}];
-            let albumConfig = { incluso: ${document.getElementById('albIncluso').value}, extra: ${document.getElementById('albExtra').value} };
+            let fotos = [${fotosJs}];
+            let albumConfig = { incluso: ${albumConf.incluso}, extra: ${albumConf.extra} };
             let produtos = ${JSON.stringify(DB_CONFIG.produtos)};
-            let creditos = ${creditsArr};
+            let creditos = ${JSON.stringify(DB_CONFIG.creditos)}; 
             let entrada = ${document.getElementById('valEntrada').value};
             let calculoConfig = ${JSON.stringify(DB_CONFIG.calculo)};
             `;
 
-            // 3. Injetar no HTML
-            const finalHtml = htmlContent.replace('// DATA_INJECTION_POINT', injection);
+            html = html.replace('// DATA_INJECTION_POINT', injection);
 
-            // 4. Enviar para GitHub
-            showStatus("☁️ Enviando para o GitHub...", "success");
+            // C. Save HTML
+            const htmlPath = `clientes/${clientName}/index.html`;
+            const htmlB64 = utf8_to_b64(html);
             
-            const path = `clientes/${clientName}.html`;
-            const apiUrl = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
-            const message = `Nova galeria: ${clientName}`;
-            const contentBase64 = utf8_to_b64(finalHtml);
-
-            // Verifica se arquivo já existe para pegar o SHA (update)
-            let sha = null;
+            let htmlSha = null;
             try {
-                const check = await fetch(apiUrl, { headers: { Authorization: `token ${token}` } });
-                if(check.ok) {
-                    const data = await check.json();
-                    sha = data.sha;
-                }
-            } catch(e) {}
+                const h = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${htmlPath}`, { headers: { Authorization: `token ${token}` }});
+                if(h.ok) htmlSha = (await h.json()).sha;
+            } catch(e){}
 
-            const body = {
-                message: message,
-                content: contentBase64,
-                branch: "main" // ou master
-            };
-            if(sha) body.sha = sha;
-
-            const putResponse = await fetch(apiUrl, {
+            await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${htmlPath}`, {
                 method: 'PUT',
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(body)
+                headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: `Galeria HTML ${clientName}`, content: htmlB64, sha: htmlSha, branch: "main" })
             });
 
-            if(!putResponse.ok) throw new Error("Erro ao salvar no GitHub: " + putResponse.statusText);
-
-            // 5. Sucesso
-            const publicLink = `https://${user}.github.io/${repo}/clientes/${clientName}.html`;
+            const link = `https://${user}.github.io/${repo}/clientes/${clientName}/`;
+            log("✨ SUCESSO!");
             
-            showStatus("✅ Sucesso! Galeria Criada.", "success");
             const linkBox = document.getElementById('finalLink');
             linkBox.style.display = 'block';
-            linkBox.innerHTML = `Link do Cliente: <a href="${publicLink}" target="_blank" style="color:#fff;font-weight:bold">${publicLink}</a>`;
+            linkBox.innerHTML = `✅ Galeria Pronta: <a href="${link}" target="_blank">${link}</a>`;
 
-        } catch (err) {
-            console.error(err);
-            showStatus("❌ Erro: " + err.message, "error");
+        } catch (e) {
+            log("❌ ERRO: " + e.message);
         }
+    }
+
+    // --- CLEANUP ---
+    async function runCleanup() {
+        if(!confirm("Apagar pastas com mais de 60 dias?")) return;
+        const token = document.getElementById('ghToken').value;
+        const user = document.getElementById('ghUser').value;
+        const repo = document.getElementById('ghRepo').value;
+        
+        log("🧹 Iniciando limpeza...");
+        try {
+            const list = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/clientes`, { headers: { Authorization: `token ${token}` }});
+            const items = await list.json();
+            const now = new Date();
+
+            for(const item of items) {
+                if(item.type === 'dir') {
+                    // Check index.html date
+                    const commits = await fetch(`https://api.github.com/repos/${user}/${repo}/commits?path=${item.path}/index.html&page=1&per_page=1`, { headers: { Authorization: `token ${token}` }});
+                    const cData = await commits.json();
+                    if(cData.length > 0) {
+                        const date = new Date(cData[0].commit.committer.date);
+                        const days = Math.ceil(Math.abs(now - date) / (86400000));
+                        
+                        if(days > 60) {
+                            log(`🗑️ Apagando ${item.name} (${days} dias)...`);
+                            // Delete contents
+                            const files = await (await fetch(item.url, { headers: { Authorization: `token ${token}` }})).json();
+                            for(const f of files) {
+                                await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${f.path}`, {
+                                    method: 'DELETE',
+                                    headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ message: "Auto-cleanup", sha: f.sha, branch: "main" })
+                                });
+                            }
+                        } else {
+                            log(`✅ Mantendo ${item.name} (${days} dias)`);
+                        }
+                    }
+                }
+            }
+            log("✨ Limpeza finalizada.");
+        } catch(e) { log("Erro na limpeza: " + e.message); }
     }
 </script>
 

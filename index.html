@@ -3,332 +3,245 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Studio NBV • Master V5</title>
+    <title>Painel Studio NBV • Master V6</title>
     <script src="database.js"></script>
     <style>
-        :root { 
-            --brand: #2da44e; --bg: #f6f8fa; --card: #ffffff; --border: #d0d7de; 
-            --text: #24292f; --text-meta: #57606a; --danger: #cf222e; --accent: #0969da;
-        }
+        :root { --brand: #2da44e; --bg: #f6f8fa; --card: #ffffff; --border: #d0d7de; --text: #24292f; --accent: #0969da; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; background: var(--bg); color: var(--text); padding: 20px; max-width: 900px; margin: 0 auto; }
-        
-        /* Layout */
-        .card { background: var(--card); border: 1px solid var(--border); padding: 20px; border-radius: 6px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
-        .card-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; }
-        h2 { margin: 0; color: var(--text); font-size: 18px; display: flex; align-items: center; gap: 10px; }
-        .chevron { transition: transform 0.3s; color: var(--text-meta); }
-        .collapsed .chevron { transform: rotate(-90deg); }
-        .hidden { display: none !important; }
-
-        /* Inputs */
-        label { display: block; margin-top: 15px; font-weight: 600; color: var(--text); margin-bottom: 5px; font-size: 13px; }
-        input, select { width: 100%; padding: 10px; background: #ffffff; border: 1px solid var(--border); color: var(--text); border-radius: 6px; font-size: 14px; }
-        input:focus, select:focus { border-color: var(--accent); outline: 2px solid rgba(9,105,218,0.3); }
-
-        /* Drag & Drop & File Status */
-        .drop-zone { border: 2px dashed var(--border); border-radius: 6px; padding: 40px; text-align: center; cursor: pointer; transition: .2s; background: #ffffff; }
-        .drop-zone:hover { border-color: var(--brand); background: #f0fff4; }
-        .drop-zone p { margin: 0; color: var(--text-meta); font-size: 14px; }
-        
-        /* Caixa de Status dos Arquivos */
-        .file-status-box { margin-top: 15px; padding: 15px; background: #dafbe1; border: 1px solid var(--brand); border-radius: 6px; color: var(--brand); text-align: center; display: none; }
-        .file-status-box strong { font-size: 18px; display: block; margin-bottom: 5px; }
-
-        /* Barra de Progresso */
-        .progress-container { margin-top: 20px; display: none; }
-        .progress-bar { width: 100%; height: 24px; background: #eaeef2; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
-        .progress-fill { height: 100%; background: var(--brand); width: 0%; transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; font-size: 11px; color: white; font-weight: bold; }
-        .progress-text { text-align: center; font-size: 12px; color: var(--text-meta); margin-top: 5px; }
-
-        /* Editor de Preços Visual */
-        .prod-row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; }
-        .btn-del { background: #fff0f0; color: var(--danger); border: 1px solid rgba(207,34,46,0.2); padding: 0 15px; height: 38px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .btn-add { background: #f6f8fa; color: var(--text); border: 1px dashed var(--border); width: 100%; padding: 10px; cursor: pointer; border-radius: 6px; margin-top: 10px; font-weight: 600; }
-
-        /* Brindes */
-        .gift-box { background: #ddf4ff; border: 1px solid #54aeff; padding: 15px; border-radius: 6px; margin-top: 10px; }
-        .gift-list { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
-        .gift-tag { background: var(--accent); color: white; padding: 5px 10px; border-radius: 20px; font-size: 12px; display: flex; align-items: center; gap: 8px; }
-        .gift-remove { cursor: pointer; font-weight: bold; background: rgba(255,255,255,0.3); width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-
-        /* Botões */
-        button.action-btn { padding: 15px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 20px; border: none; text-transform: uppercase; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .card { background: var(--card); border: 1px solid var(--border); padding: 20px; border-radius: 6px; margin-bottom: 20px; }
+        h2 { margin: 0 0 15px 0; font-size: 18px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        label { display: block; margin-top: 10px; font-weight: 600; font-size: 13px; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; margin-top: 5px; font-family: monospace; }
+        .row { display: flex; gap: 10px; } .col { flex: 1; }
+        button { padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px; border: none; }
         .btn-primary { background: var(--brand); color: #fff; }
-        .btn-primary:hover { background: #2c974b; }
         .btn-save { background: var(--accent); color: white; }
-        .btn-danger { background: #fff0f0; color: var(--danger); border: 1px solid var(--danger); }
-
-        /* Utils */
-        .row { display: flex; gap: 15px; } .col { flex: 1; }
-        .final-link { background: #dafbe1; border: 1px solid var(--brand); color: var(--brand); padding: 20px; margin-top: 20px; border-radius: 6px; text-align: center; display: none; }
-        .final-link a { color: #1a7f37; font-weight: 900; font-size: 18px; text-decoration: underline; }
+        .hidden { display: none; }
+        
+        /* Visual Editor */
+        .prod-row { display: flex; gap: 5px; margin-bottom: 5px; }
+        .btn-del { background: #cf222e; color: white; width: 40px; }
+        
+        /* Drag Drop */
+        .drop-zone { border: 2px dashed var(--border); padding: 30px; text-align: center; background: #fff; cursor: pointer; }
+        .drop-zone:hover { background: #f0fff4; border-color: var(--brand); }
+        
+        /* Progress */
+        .progress-bar { height: 20px; background: #eee; border-radius: 10px; overflow: hidden; margin-top: 15px; display:none; }
+        .progress-fill { height: 100%; background: var(--brand); width: 0%; transition: width .2s; }
+        
+        .status-box { background: #dafbe1; color: var(--brand); padding: 10px; text-align: center; border-radius: 6px; margin-top: 10px; display: none; font-weight: bold; }
+        .final-link { background: #ddf4ff; padding: 15px; text-align: center; display: none; margin-top: 20px; border: 1px solid var(--accent); }
+        .final-link a { font-size: 18px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<h1>🚀 Studio NBV • Gerador V5</h1>
+<h1>🚀 Studio NBV • Gerador V6</h1>
 
 <div class="card">
-    <div class="card-header" onclick="toggleSection('configArea', this)">
-        <h2>🔐 Configuração GitHub</h2>
-        <span class="chevron">▼</span>
-    </div>
-    <div id="configArea" class="hidden">
-        <label>Token</label><input type="password" id="ghToken" onchange="saveConfig()">
-        <div class="row">
-            <div class="col"><label>Usuário</label><input type="text" id="ghUser" onchange="saveConfig()"></div>
-            <div class="col"><label>Repositório</label><input type="text" id="ghRepo" onchange="saveConfig()"></div>
-        </div>
+    <h2>🔐 GitHub</h2>
+    <input type="password" id="ghToken" placeholder="Token" onchange="saveConfig()">
+    <div class="row">
+        <div class="col"><input type="text" id="ghUser" placeholder="User" onchange="saveConfig()"></div>
+        <div class="col"><input type="text" id="ghRepo" placeholder="Repo" onchange="saveConfig()"></div>
     </div>
 </div>
 
 <div class="card" style="border-left: 4px solid #0969da;">
-    <div class="card-header" onclick="toggleSection('priceEditor', this)">
-        <h2>💰 Editar Preços</h2>
-        <span class="chevron">▼</span>
+    <h2>💰 Editar Preços e Tabelas</h2>
+    
+    <label>1. Produtos Avulsos</label>
+    <div id="visualList"></div>
+    <button style="background:#eee; color:#333" onclick="addProductRow('','')">+ Add Produto</button>
+
+    <label style="margin-top:20px">2. Tabela de Fotolivros (JSON Avançado)</label>
+    <p style="font-size:11px; color:#666">Edite os preços dos álbuns aqui (Cuidado com a pontuação).</p>
+    <textarea id="jsonTable" rows="6"></textarea>
+
+    <div class="row" style="margin-top:15px">
+        <div class="col"><label>Config Album Inclusas</label><input type="number" id="dbIncluso"></div>
+        <div class="col"><label>Config Valor Extra</label><input type="number" id="dbExtra"></div>
     </div>
-    <div id="priceEditor" class="hidden">
-        <div id="visualList"></div>
-        <button class="btn-add" onclick="addProductRow('', '')">+ Adicionar Produto</button>
-        <div class="row" style="margin-top:20px; border-top:1px dashed var(--border); padding-top:10px">
-            <div class="col"><label>Álbum Padrão (Incluso)</label><input type="number" id="dbIncluso"></div>
-            <div class="col"><label>R$ Foto Extra</label><input type="number" id="dbExtra"></div>
-        </div>
-        <button class="action-btn btn-save" onclick="savePricesToGitHub()">💾 SALVAR NO GITHUB</button>
-    </div>
+
+    <button class="btn-save" onclick="savePricesToGitHub()">💾 SALVAR TUDO NO GITHUB</button>
 </div>
 
 <div class="card">
-    <div class="card-header" onclick="toggleSection('galleryArea', this)">
-        <h2>📸 Nova Galeria</h2>
-        <span class="chevron">▼</span>
+    <h2>📸 Nova Galeria</h2>
+    <label>Nome do Cliente (Link)</label>
+    <input type="text" id="clientName" placeholder="maria-15anos">
+
+    <label>Fotos</label>
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">Clique ou Arraste as Fotos</div>
+    <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="handleFiles(this.files)">
+    
+    <div id="statusBox" class="status-box"></div>
+    <div class="progress-bar" id="progBar"><div class="progress-fill" id="progFill"></div></div>
+
+    <label style="color:#0969da; margin-top:20px">🎁 Brindes / Créditos</label>
+    <div class="row">
+        <div class="col" style="flex:2"><select id="giftSelector"></select></div>
+        <div class="col"><input type="number" id="giftQtd" value="1"></div>
+        <div class="col"><button style="margin-top:5px; background:#0969da; color:fff" onclick="addGift()">Add</button></div>
     </div>
-    <div id="galleryArea">
-        <label>Nome do Cliente (Link)</label>
-        <input type="text" id="clientName" placeholder="ex: casamento-maria">
-        
-        <label>Fotos</label>
-        <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-            <p>📂 Clique ou Arraste as fotos aqui</p>
-        </div>
-        <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="handleFiles(this.files)">
-        
-        <div id="fileStatusBox" class="file-status-box">
-            <strong id="fileCountBig">0 FOTOS</strong>
-            <span style="font-size:13px">Prontas para envio. Clique em "Criar" abaixo.</span>
-        </div>
+    <div id="giftDisplay" style="margin-top:5px; font-size:12px"></div>
 
-        <div id="progressContainer" class="progress-container">
-            <div class="progress-bar">
-                <div id="progressFill" class="progress-fill">0%</div>
-            </div>
-            <div id="progressText" class="progress-text">Aguardando início...</div>
-        </div>
-
-        <div class="gift-box">
-            <label style="margin-top:0; color:#0969da">🎁 Brindes / Créditos</label>
-            <div class="row">
-                <div class="col" style="flex:2">
-                    <select id="giftSelector"><option value="">Selecione...</option></select>
-                </div>
-                <div class="col" style="flex:1">
-                    <input type="number" id="giftQtd" placeholder="Qtd" value="1">
-                </div>
-                <div class="col" style="flex:1">
-                    <button style="margin:0; height:42px; background:#0969da; color:white; border:none; border-radius:6px; cursor:pointer" onclick="addGift()">Incluir</button>
-                </div>
-            </div>
-            <div id="giftDisplay" class="gift-list"></div>
-        </div>
-
-        <div class="row">
-            <div class="col"><label>Fotos no Álbum</label><input type="number" id="albIncluso"></div>
-            <div class="col"><label>R$ Extra</label><input type="number" id="albExtra"></div>
-            <div class="col"><label>Sinal Pago</label><input type="number" id="valEntrada" value="0"></div>
-        </div>
-
-        <button id="btnDeploy" class="action-btn btn-primary" onclick="processAndDeploy()">🚀 CRIAR GALERIA</button>
+    <div class="row">
+        <div class="col"><label>Álbum (Inclusas)</label><input type="number" id="albIncluso"></div>
+        <div class="col"><label>Extra (R$)</label><input type="number" id="albExtra"></div>
+        <div class="col"><label>Sinal (R$)</label><input type="number" id="valEntrada" value="0"></div>
     </div>
-</div>
 
-<div class="card" style="border-color: #cf222e">
-    <div class="card-header" onclick="toggleSection('cleanupArea', this)">
-        <h2 style="color:#cf222e">🧹 Manutenção</h2>
-        <span class="chevron">▼</span>
-    </div>
-    <div id="cleanupArea" class="hidden">
-        <button class="action-btn btn-danger" onclick="runCleanup()">🗑️ LIMPAR CLIENTES ANTIGOS</button>
-    </div>
+    <button class="btn-primary" id="btnDeploy" onclick="deploy()">🚀 CRIAR GALERIA</button>
 </div>
 
 <div id="finalLink" class="final-link"></div>
 
 <script>
-    let selectedFiles = [];
-    let clientGifts = []; 
+let selectedFiles=[], clientGifts=[];
 
-    window.onload = () => {
-        ['ghToken', 'ghUser', 'ghRepo'].forEach(k => {
-            if(localStorage.getItem(k)) document.getElementById(k).value = localStorage.getItem(k);
-        });
-        if(typeof DB_CONFIG !== 'undefined') {
-            const c = document.getElementById('visualList'); c.innerHTML = '';
-            DB_CONFIG.produtos.forEach(p => addProductRow(p.nome, p.preco));
-            document.getElementById('dbIncluso').value = DB_CONFIG.album.incluso;
-            document.getElementById('dbExtra').value = DB_CONFIG.album.extra;
-            document.getElementById('albIncluso').value = DB_CONFIG.album.incluso;
-            document.getElementById('albExtra').value = DB_CONFIG.album.extra;
-            const gs = document.getElementById('giftSelector');
-            DB_CONFIG.produtos.forEach(p => {
-                let o = document.createElement('option'); o.value = p.nome; o.innerText = p.nome; gs.appendChild(o);
-            });
-        }
+window.onload=()=>{
+    ['ghToken','ghUser','ghRepo'].forEach(k=>{if(localStorage.getItem(k))document.getElementById(k).value=localStorage.getItem(k)});
+    if(typeof DB_CONFIG!=='undefined'){
+        document.getElementById('visualList').innerHTML='';
+        DB_CONFIG.produtos.forEach(p=>addProductRow(p.nome,p.preco));
+        // Carrega tabela de fotolivro no Textarea
+        document.getElementById('jsonTable').value = JSON.stringify(DB_CONFIG.calculo.tabela, null, 2);
+        
+        document.getElementById('dbIncluso').value=DB_CONFIG.album.incluso;
+        document.getElementById('dbExtra').value=DB_CONFIG.album.extra;
+        document.getElementById('albIncluso').value=DB_CONFIG.album.incluso;
+        document.getElementById('albExtra').value=DB_CONFIG.album.extra;
+        
+        let s=document.getElementById('giftSelector');
+        DB_CONFIG.produtos.forEach(p=>{let o=document.createElement('option');o.value=p.nome;o.innerText=p.nome;s.appendChild(o)});
+    }
+}
+
+function addProductRow(n,p){
+    let d=document.createElement('div');d.className='prod-row';
+    d.innerHTML=`<input type="text" class="inp-name" value="${n}"><input type="number" class="inp-price" value="${p}"><button class="btn-del" onclick="this.parentElement.remove()">X</button>`;
+    document.getElementById('visualList').appendChild(d);
+}
+
+function addGift(){
+    let s=document.getElementById('giftSelector'), q=document.getElementById('giftQtd');
+    if(!s.value)return;
+    clientGifts.push({nome:s.value,qtd:parseInt(q.value)});
+    let d=document.getElementById('giftDisplay');
+    d.innerHTML+=`<span style="background:#0969da;color:white;padding:2px 6px;border-radius:4px;margin-right:5px">${q.value}x ${s.value}</span>`;
+}
+
+function handleFiles(f){
+    selectedFiles=Array.from(f);
+    document.getElementById('statusBox').style.display='block';
+    document.getElementById('statusBox').innerText=`${selectedFiles.length} FOTOS PRONTAS`;
+}
+
+async function savePricesToGitHub(){
+    // 1. Produtos
+    let prods=[];
+    document.querySelectorAll('.prod-row').forEach(r=>{
+        let n=r.querySelector('.inp-name').value, p=parseFloat(r.querySelector('.inp-price').value);
+        if(n) prods.push({nome:n,preco:p});
+    });
+
+    // 2. Tabela Fotolivro (Lê do Textarea)
+    let tabelaCalc;
+    try {
+        tabelaCalc = JSON.parse(document.getElementById('jsonTable').value);
+    } catch(e) {
+        return alert("Erro no JSON da Tabela de Fotolivros. Verifique as vírgulas e aspas.");
+    }
+
+    let newDB = {
+        album: { incluso:parseFloat(document.getElementById('dbIncluso').value), extra:parseFloat(document.getElementById('dbExtra').value) },
+        calculo: { 
+            markup: DB_CONFIG.calculo.markup, 
+            custoFixo: DB_CONFIG.calculo.custoFixo, 
+            regras: DB_CONFIG.calculo.regras,
+            tabela: tabelaCalc // Usa a tabela nova
+        },
+        produtos: prods,
+        creditos: []
     };
 
-    // --- UTILS ---
-    function log(msg) { console.log(msg); } // Logs agora apenas no console para limpeza visual
-    function updateProgress(pct, text) {
-        const fill = document.getElementById('progressFill');
-        const txt = document.getElementById('progressText');
-        fill.style.width = pct + '%';
-        fill.innerText = Math.floor(pct) + '%';
-        txt.innerText = text;
-    }
-
-    // --- FILES HANDLER ---
-    const dropZone = document.getElementById('dropZone');
-    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-    dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+    // Upload DB
+    let token=document.getElementById('ghToken').value, user=document.getElementById('ghUser').value, repo=document.getElementById('ghRepo').value;
+    let url=`https://api.github.com/repos/${user}/${repo}/contents/database.js`;
+    let content = `// Config Studio NBV\nconst DB_CONFIG = ${JSON.stringify(newDB,null,4)};`;
     
-    function handleFiles(files) {
-        selectedFiles = Array.from(files);
-        const count = selectedFiles.length;
-        
-        // Exibe a caixa verde grande
-        const statusBox = document.getElementById('fileStatusBox');
-        const countText = document.getElementById('fileCountBig');
-        
-        statusBox.style.display = 'block';
-        countText.innerText = `✅ ${count} FOTO${count > 1 ? 'S' : ''} PRONTA${count > 1 ? 'S' : ''}`;
-        
-        // Esconde a dropzone para limpar o visual
-        document.getElementById('dropZone').style.display = 'none';
-    }
+    try {
+        let check = await fetch(url,{headers:{Authorization:`token ${token}`}});
+        let sha = (await check.json()).sha;
+        await fetch(url,{method:'PUT',headers:{Authorization:`token ${token}`},body:JSON.stringify({message:"Update DB",content:btoa(content),sha:sha,branch:"main"})});
+        alert("Salvo com sucesso! Recarregue.");
+        location.reload();
+    } catch(e){alert("Erro ao salvar: "+e.message)}
+}
 
-    // --- DEPLOY COM BARRA DE PROGRESSO ---
-    async function processAndDeploy() {
-        const token = document.getElementById('ghToken').value;
-        const user = document.getElementById('ghUser').value;
-        const repo = document.getElementById('ghRepo').value;
-        const clientRaw = document.getElementById('clientName').value;
-        const clientName = clientRaw.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
-
-        if(!token || !clientName || selectedFiles.length === 0) return alert("Preencha o nome do cliente e selecione fotos!");
-
-        // UI Reset
-        document.getElementById('progressContainer').style.display = 'block';
-        document.getElementById('finalLink').style.display = 'none';
-        document.getElementById('btnDeploy').disabled = true;
-        updateProgress(0, "Iniciando...");
-
-        try {
-            const fileNames = [];
-            const total = selectedFiles.length;
-
-            // 1. UPLOAD DE FOTOS
-            for (let i = 0; i < total; i++) {
-                const file = selectedFiles[i];
-                const pct = ((i) / total) * 90; // Fotos vão até 90%
-                updateProgress(pct, `Enviando foto ${i+1} de ${total}: ${file.name}`);
-
-                const content = await fileToBase64(file);
-                const path = `clientes/${clientName}/${file.name}`;
-                
-                // Tenta pegar SHA (update)
-                let sha = null;
-                try {
-                    const c = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`, { headers: { Authorization: `token ${token}` }});
-                    if(c.ok) sha = (await c.json()).sha;
-                } catch(e){}
-
-                const res = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: `Img ${clientName}`, content: content, sha: sha, branch: "main" })
-                });
-
-                if(!res.ok) throw new Error(`Falha no envio da imagem: ${file.name} (${res.status})`);
-                fileNames.push(file.name);
-            }
-
-            // 2. GERAÇÃO DA GALERIA
-            updateProgress(90, "Lendo template e gerando galeria...");
+// Deploy Simplificado
+async function deploy(){
+    let token=document.getElementById('ghToken').value, user=document.getElementById('ghUser').value, repo=document.getElementById('ghRepo').value;
+    let name=document.getElementById('clientName').value.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-');
+    
+    if(!name || !selectedFiles.length) return alert("Faltam dados!");
+    
+    document.getElementById('progBar').style.display='block';
+    let fill = document.getElementById('progFill');
+    let fileNames=[];
+    
+    try {
+        // Upload Fotos
+        for(let i=0; i<selectedFiles.length; i++){
+            let f=selectedFiles[i];
+            fill.style.width = ((i/selectedFiles.length)*90)+'%';
             
-            const tplRes = await fetch('template.html');
-            if(!tplRes.ok) throw new Error("ERRO CRÍTICO: O arquivo template.html não foi encontrado na raiz do seu GitHub Pages ou pasta local.");
-            let html = await tplRes.text();
+            let reader = new FileReader();
+            let b64 = await new Promise(r=>{reader.onload=()=>r(reader.result.split(',')[1]);reader.readAsDataURL(f)});
+            
+            let path = `clientes/${name}/${f.name}`;
+            // Check SHA
+            let sha=null; try{let c=await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`,{headers:{Authorization:`token ${token}`}}); if(c.ok)sha=(await c.json()).sha;}catch(e){}
+            
+            await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`,{
+                method:'PUT',
+                headers:{Authorization:`token ${token}`},
+                body:JSON.stringify({message:`Img`,content:b64,sha:sha,branch:'main'})
+            });
+            fileNames.push(f.name);
+        }
 
-            updateProgress(95, "Salvando arquivo do cliente...");
-
-            const fotosJs = fileNames.map(u => `"${u}"`).join(',');
-            const creditsJson = JSON.stringify(clientGifts); 
-            const injection = `
-            let fotos = [${fotosJs}];
+        // Upload HTML
+        let tpl = await(await fetch('template.html')).text();
+        let injection = `
+            let fotos = [${fileNames.map(f=>`"${f}"`).join(',')}];
             let albumConfig = { incluso: ${document.getElementById('albIncluso').value}, extra: ${document.getElementById('albExtra').value} };
             let produtos = ${JSON.stringify(DB_CONFIG.produtos)};
-            let creditos = ${creditsJson}; 
+            let creditos = ${JSON.stringify(clientGifts)}; 
             let entrada = ${document.getElementById('valEntrada').value};
             let calculoConfig = ${JSON.stringify(DB_CONFIG.calculo)};
-            `;
+        `;
+        let finalHtml = tpl.replace('// DATA_INJECTION_POINT', injection);
+        
+        let hPath=`clientes/${name}/index.html`;
+        let hSha=null; try{let c=await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${hPath}`,{headers:{Authorization:`token ${token}`}}); if(c.ok)hSha=(await c.json()).sha;}catch(e){}
+        
+        await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${hPath}`,{
+            method:'PUT', headers:{Authorization:`token ${token}`},
+            body:JSON.stringify({message:`HTML`,content:btoa(unescape(encodeURIComponent(finalHtml))),sha:hSha,branch:'main'})
+        });
 
-            html = html.replace('// DATA_INJECTION_POINT', injection);
-            const htmlPath = `clientes/${clientName}/index.html`;
-            const htmlB64 = utf8_to_b64(html);
-            
-            let htmlSha = null;
-            try {
-                const h = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${htmlPath}`, { headers: { Authorization: `token ${token}` }});
-                if(h.ok) htmlSha = (await h.json()).sha;
-            } catch(e){}
+        fill.style.width='100%';
+        let link=`https://${user}.github.io/${repo}/clientes/${name}/`;
+        document.getElementById('finalLink').style.display='block';
+        document.getElementById('finalLink').innerHTML=`<a href="${link}" target="_blank">ABRIR GALERIA</a>`;
+        
+    } catch(e){ alert("Erro: "+e.message); }
+}
 
-            const finalRes = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${htmlPath}`, {
-                method: 'PUT',
-                headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: `Galeria ${clientName}`, content: htmlB64, sha: htmlSha, branch: "main" })
-            });
-
-            if(!finalRes.ok) throw new Error("Erro ao salvar o arquivo HTML final.");
-
-            updateProgress(100, "Concluído!");
-            
-            const link = `https://${user}.github.io/${repo}/clientes/${clientName}/`;
-            const linkBox = document.getElementById('finalLink');
-            linkBox.style.display = 'block';
-            linkBox.innerHTML = `✅ GALERIA CRIADA COM SUCESSO!<br><br><a href="${link}" target="_blank">👉 ABRIR GALERIA DO CLIENTE</a>`;
-
-        } catch (e) {
-            updateProgress(0, "ERRO");
-            alert("❌ Ocorreu um erro:\n" + e.message);
-            document.getElementById('progressText').innerText = "Erro: " + e.message;
-            document.getElementById('progressText').style.color = "red";
-        } finally {
-            document.getElementById('btnDeploy').disabled = false;
-        }
-    }
-
-    // --- OUTRAS FUNÇÕES (Igual V4) ---
-    function addProductRow(n,p){ let d=document.createElement('div');d.className='prod-row';d.innerHTML=`<input type="text" class="inp-name" value="${n}" style="flex:2"><input type="number" class="inp-price" value="${p}" style="flex:1"><button class="btn-del" onclick="this.parentElement.remove()">X</button>`;document.getElementById('visualList').appendChild(d); }
-    async function savePricesToGitHub(){ /* Lógica igual V4 */ alert("Use o código da V4 aqui se for editar preços, ou mantenha a mesma função."); }
-    function addGift(){ let s=document.getElementById('giftSelector'); let q=document.getElementById('giftQtd'); if(!s.value)return; clientGifts.push({nome:s.value,qtd:parseInt(q.value)}); renderGifts(); }
-    function removeGift(i){ clientGifts.splice(i,1); renderGifts(); }
-    function renderGifts(){ let d=document.getElementById('giftDisplay'); d.innerHTML=''; clientGifts.forEach((g,i)=>{d.innerHTML+=`<div class="gift-tag">${g.qtd}x ${g.nome}<div class="gift-remove" onclick="removeGift(${i})">×</div></div>`;}); }
-    function toggleSection(id,h){ let e=document.getElementById(id); if(e.classList.contains('hidden')){e.classList.remove('hidden');h.classList.remove('collapsed');}else{e.classList.add('hidden');h.classList.add('collapsed');}}
-    function saveConfig(){ localStorage.setItem('ghToken',document.getElementById('ghToken').value); localStorage.setItem('ghUser',document.getElementById('ghUser').value); localStorage.setItem('ghRepo',document.getElementById('ghRepo').value); }
-    function utf8_to_b64(str){return window.btoa(unescape(encodeURIComponent(str)));}
-    const fileToBase64=file=>new Promise((r,j)=>{const d=new FileReader();d.readAsDataURL(file);d.onload=()=>r(d.result.split(',')[1]);d.onerror=e=>j(e);});
-    async function runCleanup(){if(confirm("Limpar clientes antigos?")) alert("Função de limpeza ativa.");}
+function saveConfig(){ ['ghToken','ghUser','ghRepo'].forEach(k=>localStorage.setItem(k,document.getElementById(k).value)); }
 </script>
-
 </body>
 </html>

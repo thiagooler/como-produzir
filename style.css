@@ -39,12 +39,23 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 .full-screen-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 100; overflow-y: auto; padding: 20px; }
 .card-box { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 0 auto 15px; max-width: 500px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 .hidden { display: none !important; }
+
+/* BOTÕES */
 .btn { width: 100%; padding: 15px; border-radius: 8px; border: none; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; display: block; text-align: center; text-decoration: none; }
-.btn-primary { background: var(--brand); color: white; }
+.btn-primary { background: var(--brand); color: white; } /* Verde Padrão */
 .btn-whats { background: #25D366; color: white; }
 .btn-sec { background: #f6f8fa; border: 1px solid var(--border); color: var(--text); }
+/* Botão Finalizar Específico */
+#btnFinish { background-color: var(--brand) !important; color: white !important; margin-top: 20px; }
+#btnFinish:hover { background-color: var(--brand-hover) !important; }
 
 /* FOOTER */
 .sticky-footer { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid var(--border); padding: 15px 20px; z-index: 50; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -4px 12px rgba(0,0,0,0.05); }
 .total-price { font-size: 18px; font-weight: bold; }
 .digital-badge { font-size: 10px; background: #ddf4ff; color: var(--accent); padding: 2px 6px; border-radius: 4px; margin-left: 5px; }
+
+/* ESTILO DO RESUMO (CUPOM) */
+.receipt-line { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 14px; }
+.receipt-sub { font-size: 11px; color: #666; margin-top: 2px; }
+.receipt-total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 18px; margin-top: 15px; padding-top: 10px; border-top: 2px solid #333; }
+.receipt-entry { color: var(--brand); font-size: 14px; }

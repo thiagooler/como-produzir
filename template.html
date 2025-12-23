@@ -5,26 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>Seleção de Fotos • Studio NBV</title>
   <style>
+    /* TEMA CLARO */
     :root {
-      --bg: #0d1117; --card: #161b22; --border: #30363d;
-      --text: #c9d1d9; --text-bright: #f0f6fc;
-      --brand: #238636; --brand-hover: #2ea043;
-      --accent: #1f6feb; --warning: #d29922; --danger: #da3633;
+      --bg: #f6f8fa;          /* Fundo Global */
+      --card: #ffffff;        /* Cards Brancos */
+      --border: #d0d7de;      /* Borda */
+      --text: #24292f;        /* Texto Principal */
+      --text-meta: #57606a;   /* Texto Secundário */
+      --brand: #2da44e;       /* Verde */
+      --brand-hover: #2c974b;
+      --accent: #0969da;      /* Azul */
+      --warning: #9a6700;     /* Amarelo Escuro para Contraste */
+      --danger: #cf222e;      /* Vermelho */
+      --photo-bg: #eaeef2;    /* Fundo da Área da Foto */
     }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
     /* HEADER */
-    header { background: var(--card); border-bottom: 1px solid var(--border); padding: 10px 15px; display: flex; align-items: center; justify-content: space-between; height: 60px; z-index: 10; }
-    .brand { font-weight: 700; color: var(--text-bright); font-size: 16px; }
+    header { background: var(--card); border-bottom: 1px solid var(--border); padding: 10px 15px; display: flex; align-items: center; justify-content: space-between; height: 60px; z-index: 10; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .brand { font-weight: 700; color: var(--text); font-size: 16px; }
     .brand span { color: var(--brand); }
     
     /* BARRA DE PROGRESSO */
-    .album-bar { flex: 1; margin: 0 15px; background: #21262d; height: 18px; border-radius: 9px; position: relative; overflow: hidden; display: none; }
+    .album-bar { flex: 1; margin: 0 15px; background: var(--photo-bg); height: 18px; border-radius: 9px; position: relative; overflow: hidden; display: none; }
     .album-bar.visible { display: block; }
     .album-fill { height: 100%; background: var(--brand); width: 0%; transition: width .3s; }
     .album-fill.over { background: var(--warning); }
-    .album-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+    .album-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,0.3); }
 
     /* LAYOUT */
     .main { flex: 1; overflow-y: auto; padding: 15px; }
@@ -32,55 +40,59 @@
     
     /* START SCREEN */
     .start-box { max-width: 400px; margin: 20px auto; }
-    .opt-card { background: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; gap: 10px; cursor: pointer; }
-    .opt-card:hover { border-color: var(--text); }
+    .opt-card { background: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; gap: 10px; cursor: pointer; transition: .2s; }
+    .opt-card:hover { border-color: var(--accent); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
     
     /* GALERIA */
     .gallery-grid { display: grid; grid-template-columns: 1fr 340px; gap: 15px; height: 100%; }
-    .photo-area { background: #010409; border: 1px solid var(--border); border-radius: 8px; position: relative; display: flex; flex-direction: column; overflow: hidden; min-height: 300px; }
+    /* Área da foto com fundo neutro suave */
+    .photo-area { background: var(--photo-bg); border: 1px solid var(--border); border-radius: 8px; position: relative; display: flex; flex-direction: column; overflow: hidden; min-height: 300px; }
     .photo-area img { width: 100%; height: 100%; object-fit: contain; flex: 1; }
     .nav-overlay { position: absolute; inset: 0; pointer-events: none; display: flex; justify-content: space-between; align-items: center; padding: 10px; }
-    .nav-btn { pointer-events: auto; background: rgba(0,0,0,0.6); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 20px; cursor: pointer; backdrop-filter: blur(4px); }
+    .nav-btn { pointer-events: auto; background: rgba(255,255,255,0.8); color: var(--text); border: 1px solid var(--border); width: 40px; height: 40px; border-radius: 50%; font-size: 20px; cursor: pointer; backdrop-filter: blur(4px); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     
     /* CONTROLES */
     .sidebar { display: flex; flex-direction: column; gap: 15px; overflow-y: auto; padding-right: 5px; }
     
     /* Toggle Album */
-    .toggle-album { background: rgba(35,134,54,0.1); border: 1px solid var(--brand); padding: 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: .2s; }
-    .toggle-album.active { background: var(--brand); color: white; }
+    .toggle-album { background: #dafbe1; border: 1px solid var(--brand); padding: 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: .2s; color: var(--brand); font-weight: bold; }
+    .toggle-album:hover { background: #cdfacd; }
+    .toggle-album.active { background: var(--brand); color: white; border-color: var(--brand); }
 
     /* Listas de Produtos */
-    .prod-group { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-    .prod-header { background: #21262d; padding: 8px 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; color: #8b949e; border-bottom: 1px solid var(--border); }
-    .prod-item { padding: 10px 12px; border-bottom: 1px solid #21262d; display: flex; justify-content: space-between; align-items: center; }
+    .prod-group { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .prod-header { background: #f6f8fa; padding: 8px 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; color: var(--text-meta); border-bottom: 1px solid var(--border); }
+    .prod-item { padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
     .prod-item:last-child { border-bottom: none; }
     .prod-item.hidden-item { display: none; }
-    .prod-item.highlight { background: rgba(31,111,235,0.05); }
+    .prod-item.highlight { background: #f0f6fc; }
 
     /* Stepper */
-    .stepper-ctrl { display: flex; background: #0d1117; border-radius: 6px; border: 1px solid var(--border); height: 28px; }
+    .stepper-ctrl { display: flex; background: #ffffff; border-radius: 6px; border: 1px solid var(--border); height: 28px; }
     .stepper-ctrl button { background: none; border: none; color: var(--text); width: 28px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
     .stepper-ctrl button:disabled { opacity: 0.3; cursor: not-allowed; }
     .stepper-ctrl span { width: 24px; text-align: center; line-height: 26px; font-size: 13px; font-weight: bold; }
-    .stepper-ctrl.active { border-color: var(--brand); background: rgba(35,134,54,0.1); color: #fff; }
-    .stepper-ctrl button:not(:disabled):hover { background: rgba(255,255,255,0.1); }
+    .stepper-ctrl.active { border-color: var(--brand); background: #dafbe1; color: var(--brand); }
+    .stepper-ctrl button:not(:disabled):hover { background: #f0f0f0; }
     
     /* Digital Alert */
     .digital-note { font-size: 11px; color: var(--brand); font-weight: 500; }
 
     /* RESUMO */
-    .summary-box { background: var(--card); border: 1px solid var(--border); padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-    .sum-line { display: flex; justify-content: space-between; border-bottom: 1px dashed #21262d; padding: 8px 0; font-size: 13px; }
-    .sum-total { text-align: right; font-size: 22px; font-weight: bold; margin-top: 15px; color: var(--text-bright); }
+    .summary-box { background: var(--card); border: 1px solid var(--border); padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .sum-line { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border); padding: 8px 0; font-size: 13px; }
+    .sum-total { text-align: right; font-size: 22px; font-weight: bold; margin-top: 15px; color: var(--text); }
     
-    .album-option { border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-top: 10px; cursor: pointer; background: #0d1117; transition: .2s; }
-    .album-option:hover { border-color: var(--accent); }
-    .album-option.selected { border-color: var(--brand); background: rgba(35,134,54,0.1); box-shadow: 0 0 0 1px var(--brand); }
+    .album-option { border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-top: 10px; cursor: pointer; background: #ffffff; transition: .2s; }
+    .album-option:hover { border-color: var(--accent); background: #f0f6fc; }
+    .album-option.selected { border-color: var(--brand); background: #dafbe1; box-shadow: 0 0 0 1px var(--brand); }
 
-    .btn { width: 100%; padding: 15px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; text-decoration: none; display: block; text-align: center; }
+    .btn { width: 100%; padding: 15px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; text-decoration: none; display: block; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
     .btn-primary { background: var(--brand); color: white; }
+    .btn-primary:hover { background: var(--brand-hover); }
     .btn-whats { background: #25D366; color: white; }
-    .btn-sec { background: #21262d; color: var(--text); border: 1px solid var(--border); }
+    .btn-sec { background: #f6f8fa; color: var(--text); border: 1px solid var(--border); }
+    .btn-sec:hover { background: #eaeef2; }
 
     @media(max-width: 768px) { 
       .gallery-grid { display: flex; flex-direction: column; } 
@@ -97,15 +109,15 @@
     <div id="albumFill" class="album-fill"></div>
     <div id="albumText" class="album-text">0 / 0</div>
   </div>
-  <div style="font-size:12px; color:#8b949e" id="counter">1 / 1</div>
+  <div style="font-size:12px; color:var(--text-meta)" id="counter">1 / 1</div>
 </header>
 
 <div class="main">
   <div id="view-start" class="start-box">
     <h2 style="text-align:center">Bem-vindo!</h2>
     
-    <div id="alertCredits" class="hidden" style="background:rgba(31,111,235,0.15); color:#58a6ff; padding:12px; border-radius:6px; margin-bottom:15px; font-size:13px; border:1px solid rgba(31,111,235,0.3)">
-      🎁 <strong>Você possui créditos!</strong><br>
+    <div id="alertCredits" class="hidden" style="background:#ddf4ff; color:#0969da; padding:12px; border-radius:6px; margin-bottom:15px; font-size:13px; border:1px solid #54aeff">
+      🎁 <strong>Você possui brindes/créditos!</strong><br>
       Itens inclusos ou descontos serão aplicados automaticamente.
     </div>
 
@@ -113,7 +125,7 @@
       <input type="radio" name="mode" value="album" id="rb1">
       <div>
         <label for="rb1" style="font-weight:bold; display:block; cursor:pointer">Montar Fotolivro</label>
-        <small style="color:#8b949e" id="descAlbum">Selecione as melhores fotos para o seu álbum.</small>
+        <small style="color:var(--text-meta)" id="descAlbum">Selecione as melhores fotos para o seu álbum.</small>
       </div>
     </div>
 
@@ -121,7 +133,7 @@
       <input type="radio" name="mode" value="avulso" id="rb2">
       <div>
         <label for="rb2" style="font-weight:bold; display:block; cursor:pointer">Revelações Avulsas</label>
-        <small style="color:#8b949e">Apenas impressões, quadros ou arquivos.</small>
+        <small style="color:var(--text-meta)">Apenas impressões, quadros ou arquivos.</small>
       </div>
     </div>
 
@@ -135,7 +147,7 @@
         <button class="nav-btn" onclick="app.nav(-1)">❮</button>
         <button class="nav-btn" onclick="app.nav(1)">❯</button>
       </div>
-      <div style="position:absolute; bottom:10px; right:10px; background:rgba(0,0,0,0.7); color:#fff; font-size:11px; padding:3px 6px; border-radius:4px" id="imgName">img.jpg</div>
+      <div style="position:absolute; bottom:10px; right:10px; background:rgba(255,255,255,0.9); color:var(--text); font-size:11px; padding:3px 6px; border-radius:4px; border:1px solid var(--border); font-weight:bold" id="imgName">img.jpg</div>
     </div>
 
     <div class="sidebar">
@@ -158,7 +170,7 @@
       <div class="summary-box" id="summaryContent"></div>
       
       <div style="text-align:right">
-        <div id="entradaDisplay" style="font-size:13px; color:#8b949e; display:none"></div>
+        <div id="entradaDisplay" style="font-size:13px; color:var(--text-meta); display:none"></div>
         <div class="sum-total" id="finalTotal">R$ 0,00</div>
       </div>
 
@@ -176,7 +188,6 @@
 const getEl = id => document.getElementById(id);
 const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 
-// Utilitários de Nome
 const cleanName = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
 const getDim = (name) => {
   const match = name.match(/\d+x\d+/i);
@@ -193,7 +204,7 @@ const app = {
   digitalPrice: 0,
 
   init() {
-    if(!fotos.length) return getEl('view-start').innerHTML = "<p style='text-align:center;margin-top:50px'>⚠️ Galeria vazia ou não configurada.</p>";
+    if(!fotos.length) return getEl('view-start').innerHTML = "<p style='text-align:center;margin-top:50px'>⚠️ Galeria vazia.</p>";
     
     this.sel = fotos.map(()=>({ inAlbum:false, extras:{} }));
     getEl('counter').innerText = `1 / ${fotos.length}`;
@@ -272,7 +283,6 @@ const app = {
     }
   },
 
-  // --- RENDERIZAÇÃO DA LISTA DE PRODUTOS ---
   renderProdListStructure() {
     const container = getEl('dynamicProds');
     container.innerHTML = '';
@@ -296,7 +306,7 @@ const app = {
         if(title === 'Porta Retratos' && dim) extraClass = `frame-item frame-${dim}`;
         if(isDigitalProduct(p.nome)) {
             extraClass += ' digital-item';
-            digitalNoteHtml = '<span class="digital-note" style="color:var(--brand);margin-left:5px"></span>';
+            digitalNoteHtml = '<span class="digital-note" style="margin-left:5px"></span>';
         }
 
         const cred = creditos.find(c=>c.nome===p.nome);
@@ -307,7 +317,7 @@ const app = {
         <div class="prod-item ${extraClass}" id="row_${safe}">
           <div>
             <div style="font-size:13px; font-weight:500">${p.nome}</div>
-            <div style="font-size:11px; color:#8b949e">${sub}${digitalNoteHtml}</div>
+            <div style="font-size:11px; color:var(--text-meta)">${sub}${digitalNoteHtml}</div>
           </div>
           <div class="stepper-ctrl" id="stp_${safe}">
             <button class="btn-minus" onclick="app.chg('${p.nome}',-1)">−</button>
@@ -334,92 +344,57 @@ const app = {
     const current = extras[name] || 0;
     
     let newVal = Math.max(0, current + d);
-    
-    // Constraint Digital: Max 1
-    if (isDigitalProduct(name)) {
-        newVal = Math.min(newVal, 1);
-    }
+    if (isDigitalProduct(name)) newVal = Math.min(newVal, 1);
     
     extras[name] = newVal;
-    
     if (extras[name] === 0) delete extras[name];
-    
     this.updateSteppers();
   },
 
-  // --- ATUALIZAÇÃO E BLOQUEIO DE STEPS E VISIBILIDADE ---
   updateSteppers() {
     const extras = this.sel[this.idx].extras;
-    
-    // 1. Check for any Print Selection in this photo
-    const hasPrintSelection = Object.keys(extras).some(k => 
-        isPrintProduct(k) && (extras[k] || 0) > 0
-    );
+    const hasPrintSelection = Object.keys(extras).some(k => isPrintProduct(k) && (extras[k] || 0) > 0);
 
-    // 2. Loop through all products to update UI and apply constraints
     produtos.forEach(p => {
       const safe = p.nome.replace(/\s/g,'');
       const elStp = getEl(`stp_${safe}`);
       const elRow = getEl(`row_${safe}`);
       
       if(elStp && elRow) {
-        const val = extras[p.nome] || 0;
+        let val = extras[p.nome] || 0;
         const isDigital = isDigitalProduct(p.nome);
 
-        // Reset state for new calculations
         elStp.querySelector('.btn-plus').disabled = false;
         elStp.querySelector('.btn-minus').disabled = false;
         elRow.classList.remove('hidden-item', 'highlight');
 
-        // DIGITAL PRODUCT LOGIC
         if (isDigital) {
           const digitalNote = elRow.querySelector('.digital-note');
           if (hasPrintSelection) {
-            // BLOQUEIO: Se tem revelação, digital é brinde. Esconde e zera.
             elRow.classList.add('hidden-item'); 
             if (digitalNote) digitalNote.innerHTML = ' (Incluso na Revelação)';
-
-            if (val > 0) {
-              delete extras[p.nome];
-              val = 0; // Atualiza variável local
-            }
+            if (val > 0) { delete extras[p.nome]; val = 0; }
           } else {
-            // LIMITE 1: Se não tem revelação, digital pode ser selecionado (max 1)
-            if (val >= 1) {
-              elStp.querySelector('.btn-plus').disabled = true;
-            }
+            if (val >= 1) elStp.querySelector('.btn-plus').disabled = true;
             if (digitalNote) digitalNote.innerHTML = '';
           }
-        } 
-        
-        // PORTA RETRATO VISIBILITY LOGIC
-        else if (elRow.classList.contains('frame-item')) {
+        } else if (elRow.classList.contains('frame-item')) {
            const frameDim = getDim(p.nome);
-           const matchingPrintSelected = Object.keys(extras).some(k => 
-               isPrintProduct(k) && getDim(k) === frameDim && extras[k] > 0
-           );
-
-           if (matchingPrintSelected) {
-               elRow.classList.add('highlight'); // Fica visível
-           } else {
+           const matchingPrintSelected = Object.keys(extras).some(k => isPrintProduct(k) && getDim(k) === frameDim && extras[k] > 0);
+           if (matchingPrintSelected) elRow.classList.add('highlight'); 
+           else {
                elRow.classList.add('hidden-item');
-               if (val > 0) {
-                   delete extras[p.nome]; // Zera e remove se escondeu
-                   val = 0;
-               }
+               if (val > 0) { delete extras[p.nome]; val = 0; }
            }
         }
 
-        // Final UI Update
         elStp.querySelector('.val').innerText = val;
         if (val > 0) elStp.classList.add('active');
         else elStp.classList.remove('active');
-        
         if (val === 0) elStp.querySelector('.btn-minus').disabled = true;
       }
     });
   },
-  // --- FIM LÓGICA DE VISIBILIDADE ---
 
   finish() {
     getEl('view-gallery').classList.add('hidden');
@@ -463,28 +438,23 @@ const app = {
     let html = '';
     let totalMoney = 0;
     
-    // --- 1. PREPARAÇÃO DA LISTA DE PRODUÇÃO (AGRUPAMENTO) ---
     const productionList = {};
     const albumFiles = [];
 
     this.sel.forEach((s, i) => {
         const fileName = fotos[i].split('/').pop();
         if(s.inAlbum) albumFiles.push(fileName);
-        
         Object.entries(s.extras).forEach(([prodName, qtd]) => {
             if(qtd > 0) {
                 if(!productionList[prodName]) productionList[prodName] = [];
-                // Se a pessoa pediu mais de uma cópia da mesma foto
                 const entry = qtd > 1 ? `${fileName} (${qtd}x)` : fileName;
                 productionList[prodName].push(entry);
             }
         });
     });
 
-    // --- 2. GERAÇÃO DO TEXTO DO WHATSAPP ---
     let txtWhats = "*📝 PEDIDO STUDIO NBV*\n\n";
 
-    // 2a. Seção Produção: Lista detalhada
     if(this.mode === 'album' && albumFiles.length > 0) {
         txtWhats += `*FOTOLIVRO (${albumFiles.length} fotos)*\n`;
         txtWhats += albumFiles.join(', ') + "\n\n";
@@ -500,21 +470,17 @@ const app = {
     }
 
     txtWhats += "*💰 RESUMO FINANCEIRO:*\n";
-
-    // --- 3. CÁLCULO FINANCEIRO E HTML ---
     
-    // Créditos Digitais Disponíveis
     let digitalCreditsAvailable = 0;
     const credDig = creditos.find(c => isDigitalProduct(c.nome));
     if(credDig) digitalCreditsAvailable = credDig.qtd;
     let digitalBonusCount = 0;
 
-    // A. Resumo Fotolivro
     if(this.mode === 'album') {
       const count = this.sel.filter(s=>s.inAlbum).length;
-      html += `<div style="border-bottom:1px solid #30363d; padding-bottom:10px; margin-bottom:10px"><strong>📚 Fotolivro (${count} fotos)</strong>`;
+      html += `<div style="border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:10px"><strong>📚 Fotolivro (${count} fotos)</strong>`;
       
-      if(albumConfig.incluso > 0) { // Pacote Fixo
+      if(albumConfig.incluso > 0) { 
         if(count <= albumConfig.incluso) {
           html += `<div class="sum-line"><span>Pacote (${albumConfig.incluso} fotos)</span><span>Incluso</span></div>`;
           txtWhats += `📚 Fotolivro: ${count} fotos (Incluso no Pacote)\n`;
@@ -525,7 +491,7 @@ const app = {
           html += `<div class="sum-line"><span>Pacote + ${ex} Extras</span><span style="color:var(--warning)">${BRL(cost)}</span></div>`;
           txtWhats += `📚 Fotolivro: ${count} fotos (${ex} extras) = ${BRL(cost)}\n`;
         }
-      } else { // Cálculo Dinâmico
+      } else { 
         const options = this.calculateAlbumOptions(count);
         if(!options.length) {
           html += `<div style="color:var(--warning)">Sem tabela para esta quantidade.</div>`;
@@ -560,7 +526,6 @@ const app = {
       html += `</div>`;
     }
 
-    // B. Resumo Itens Avulsos (Recalculando totais para o financeiro)
     const consolidated = {};
     this.sel.forEach((s) => {
       let hasPrintThisPhoto = false;
@@ -583,30 +548,26 @@ const app = {
         let discountMsg = "";
         let whatsDiscountLine = "";
         
-        // --- DESCONTO CRÉDITO DIGITAL ---
         if(isPrintProduct(name) && this.digitalPrice > 0) {
           if(digitalCreditsAvailable > 0) {
             const amountToDiscount = Math.min(qtd, digitalCreditsAvailable);
             const discountValue = amountToDiscount * this.digitalPrice;
-            
             totalPrice -= discountValue;
             digitalCreditsAvailable -= amountToDiscount;
-            
             if(discountValue > 0) {
-              discountMsg = `<div style="font-size:10px; color:var(--brand)">(-${BRL(discountValue)} desc. crédito digital)</div>`;
+              discountMsg = `<div style="font-size:10px; color:var(--brand)">(-${BRL(discountValue)} desc. crédito)</div>`;
               whatsDiscountLine = `   └─ Desconto (Crédito Digital): -${BRL(discountValue)}\n`;
             }
           }
         }
         
-        // --- DESCONTO BRINDE DO PACOTE ---
         const cred = creditos.find(c=>c.nome===name);
         if(cred) {
             const free = Math.min(qtd, cred.qtd);
             const discountValue = free * priceUnit;
             totalPrice -= discountValue; 
             if(free > 0) {
-               if(discountMsg) discountMsg += `<div style="font-size:10px; color:var(--accent)">(+ ${free} un. brinde do pacote)</div>`;
+               if(discountMsg) discountMsg += `<div style="font-size:10px; color:var(--accent)">(+ ${free} un. brinde)</div>`;
                else discountMsg = `<small style="color:var(--accent)">(${free} brinde)</small>`;
                whatsDiscountLine += `   └─ Abatimento (${free} un. brinde): -${BRL(discountValue)}\n`;
             }
@@ -614,20 +575,16 @@ const app = {
         
         totalMoney += totalPrice;
         
-        // HTML Line
         html += `<div class="sum-line">
           <div>${qtd}x ${name} ${discountMsg}</div>
           <div>${BRL(totalPrice)}</div>
         </div>`;
         
-        // Whats Line (Formato Solicitado)
-        // Ex: 2 fotos 10x15 - R$ 10,00 cada - total de R$ 20,00
         const rawTotal = priceUnit * qtd;
         txtWhats += `${qtd}x ${name} - ${BRL(priceUnit)} un. = ${BRL(rawTotal)}\n`;
         if(whatsDiscountLine) txtWhats += whatsDiscountLine;
       }
       
-      // Brinde digital
       if(digitalBonusCount > 0) {
         html += `<div class="sum-line" style="color:var(--brand)">
           <div>🎁 ${digitalBonusCount}x Arquivos Digitais (Incluso)</div>

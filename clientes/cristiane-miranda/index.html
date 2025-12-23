@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Galeria Studio NBV</title>
+  <style>
+    /* TEMA CLARO FORÇADO */
+    :root {
+      --bg: #f9f9f9; --card: #ffffff; --text: #333333; --border: #e0e0e0;
+      --brand: #2da44e; --accent: #0969da; --warning: #d29922;
+    }
+    body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    
+    /* Sticky Footer */
+    .sticky-bar { 
+        position: fixed; bottom: 0; left: 0; right: 0; 
+        background: #fff; border-top: 1px solid var(--brand); 
+        padding: 15px; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .sticky-total { font-weight: bold; font-size: 16px; }
+    .sticky-neg { color: var(--brand); } /* Crédito */
+    .sticky-pos { color: #333; } /* A Pagar */
+
+    .main { flex: 1; overflow-y: auto; padding: 15px; padding-bottom: 80px; /* Espaço pra barra */ }
+    .hidden { display: none !important; }
+
+    /* Cards */
+    .card { background: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 8px; margin-bottom: 10px; }
+    .btn { background: var(--brand); color: #fff; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; display: block; text-align: center; text-decoration: none; }
+    
+    /* Start Info */
+    .start-info { background: #fffbe6; border: 1px solid #ffe58f; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
+    .start-info h3 { margin: 0 0 10px 0; font-size: 15px; color: #d48806; }
+    .start-list { list-style: none; padding: 0; margin: 0; }
+    .start-list li { margin-bottom: 5px; border-bottom: 1px dashed #eee; padding-bottom: 5px; }
+
+    /* Galeria */
+    .photo-frame { height: 60vh; background: #eee; display: flex; align-items: center; justify-content: center; position: relative; border-radius: 8px; overflow: hidden; }
+    .photo-frame img { max-width: 100%; max-height: 100%; }
+    .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.8); border: 1px solid #ccc; width: 40px; height: 40px; border-radius: 50%; font-size: 20px; cursor: pointer; }
+    .nav-left { left: 10px; } .nav-right { right: 10px; }
+
+    /* Produtos */
+    .prod-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+    .ctrl { display: flex; align-items: center; gap: 10px; }
+    .ctrl button { width: 30px; height: 30px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<div class="main">
+    <div id="view-start" style="max-width: 400px; margin: 30px auto;">
+        <h2 style="text-align:center; color:var(--brand)">Olá! Bem-vindo(a).</h2>
+        <p style="text-align:center; color:#666; font-size:14px">Confira o que preparamos para você.</p>
+        
+        <div class="start-info" id="startInfoBox">
+            <h3>🎁 Seus Créditos e Pagamentos:</h3>
+            <ul class="start-list" id="startList"></ul>
+        </div>
+
+        <div class="card" onclick="app.setMode('album')" style="cursor:pointer; border-left:4px solid var(--brand)">
+            <strong>📚 Montar Fotolivro</strong><br>
+            <small style="color:#666">Escolher fotos para o álbum.</small>
+        </div>
+        <div class="card" onclick="app.setMode('avulso')" style="cursor:pointer; border-left:4px solid var(--accent)">
+            <strong>📸 Revelação / Arquivos</strong><br>
+            <small style="color:#666">Apenas fotos avulsas ou download.</small>
+        </div>
+    </div>
+
+    <div id="view-gallery" class="hidden">
+        <div style="text-align:center; margin-bottom:10px; font-weight:bold" id="counter">1 / 10</div>
+        
+        <div class="photo-frame">
+            <button class="nav-btn nav-left" onclick="app.nav(-1)">❮</button>
+            <img id="imgMain" src="">
+            <button class="nav-btn nav-right" onclick="app.nav(1)">❯</button>
+        </div>
+
+        <div id="prodsArea" style="margin-top:20px; background:#fff; padding:15px; border-radius:8px; border:1px solid #eee">
+            </div>
+
+        <button id="btnFinish" class="btn hidden" style="margin-top:20px; background:#333" onclick="app.finish()">✅ Finalizar Seleção</button>
+    </div>
+
+    <div id="view-summary" class="hidden" style="max-width: 500px; margin: 0 auto">
+        <h2>Resumo do Pedido</h2>
+        <div class="card" id="summaryList"></div>
+        <div style="text-align:right; font-size:18px; font-weight:bold" id="finalTotalDisplay"></div>
+        <a id="btnWhats" target="_blank" class="btn" style="background:#25D366; margin-top:15px">Enviar no WhatsApp</a>
+        <button class="btn" style="background:#666; margin-top:10px" onclick="location.reload()">Voltar</button>
+    </div>
+</div>
+
+<div id="stickyBar" class="sticky-bar hidden">
+    <div style="font-size:12px; color:#666">
+        Selecionados: <strong id="stickQtd" style="color:#000">0</strong>
+    </div>
+    <div class="sticky-total" id="stickTotal">R$ 0,00</div>
+</div>
+
+<script>
+
+            let fotos = ["foto-0032.jpg","foto-0040.jpg","foto-0121.jpg","foto-0130.jpg","foto-0132.jpg","foto-0166.jpg","foto-0199.jpg","foto-0221.jpg","foto-0223.jpg","foto-0224.jpg","foto-0234.jpg","foto-0339.jpg","foto-0345.jpg","foto-0351.jpg","foto-0358.jpg","foto-0362.jpg","foto-0366.jpg","foto-0372.jpg","foto-0374.jpg","foto-0378.jpg"];
+            let albumConfig = { incluso: 0, extra: 15 };
+            let produtos = [{"nome":"Foto 10x15","preco":10},{"nome":"Foto 15x20","preco":20},{"nome":"Foto 20x30","preco":30},{"nome":"Foto 30x40","preco":40},{"nome":"Foto 40x60","preco":60},{"nome":"Porta retrato 10x15","preco":20},{"nome":"Porta retrato 15x20","preco":35},{"nome":"Porta retrato 20x30","preco":45},{"nome":"Porta retrato 30x40","preco":120},{"nome":"Porta retrato 40x60","preco":290},{"nome":"Arquivo Digital","preco":8}];
+            let creditos = []; 
+            let entrada = 40;
+            let calculoConfig = {"markup":2.5,"custoFixo":30,"regras":{"15x20":2,"20x30":4,"30x40":5},"tabela":[{"size":"30x40","pages":20,"price":592,"priceBox":754},{"size":"30x40","pages":30,"price":750,"priceBox":912},{"size":"30x40","pages":40,"price":879,"priceBox":1070},{"size":"30x40","pages":50,"price":1037,"priceBox":1228},{"size":"30x40","pages":60,"price":1195,"priceBox":1386},{"size":"30x40","pages":70,"price":1353,"priceBox":1544},{"size":"30x40","pages":80,"price":1511,"priceBox":1702},{"size":"30x40","pages":90,"price":1669,"priceBox":1860},{"size":"30x40","pages":100,"price":1827,"priceBox":2018},{"size":"20x30","pages":20,"price":317,"priceBox":443},{"size":"20x30","pages":30,"price":406,"priceBox":532},{"size":"20x30","pages":40,"price":495,"priceBox":621},{"size":"20x30","pages":50,"price":584,"priceBox":710},{"size":"20x30","pages":60,"price":673,"priceBox":799},{"size":"20x30","pages":70,"price":762,"priceBox":888},{"size":"20x30","pages":80,"price":851,"priceBox":977},{"size":"20x30","pages":90,"price":940,"priceBox":1066},{"size":"20x30","pages":100,"price":1029,"priceBox":1155},{"size":"15x20","pages":20,"price":214,"priceBox":356},{"size":"15x20","pages":30,"price":269,"priceBox":382},{"size":"15x20","pages":40,"price":324,"priceBox":437},{"size":"15x20","pages":50,"price":379,"priceBox":492},{"size":"15x20","pages":60,"price":434,"priceBox":547},{"size":"15x20","pages":70,"price":489,"priceBox":602},{"size":"15x20","pages":80,"price":544,"priceBox":657},{"size":"15x20","pages":90,"price":599,"priceBox":712},{"size":"15x20","pages":100,"price":654,"priceBox":767}]};
+        
+
+const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+
+const app = {
+    idx: 0,
+    mode: '',
+    sel: [],
+
+    init(){
+        if(!fotos.length) return alert("Sem fotos!");
+        this.sel = fotos.map(()=>({ extras:{} }));
+
+        // Preenche Tela Inicial
+        const list = document.getElementById('startList');
+        let hasInfo = false;
+        
+        if(entrada > 0) {
+            list.innerHTML += `<li>✅ Entrada Paga: <strong>${BRL(entrada)}</strong></li>`;
+            hasInfo = true;
+        }
+        if(creditos && creditos.length > 0) {
+            creditos.forEach(c => {
+                list.innerHTML += `<li>🎁 Ganhou: <strong>${c.qtd}x ${c.nome}</strong></li>`;
+            });
+            hasInfo = true;
+        }
+        if(!hasInfo) document.getElementById('startInfoBox').style.display = 'none';
+    },
+
+    setMode(m){
+        this.mode = m;
+        document.getElementById('view-start').classList.add('hidden');
+        document.getElementById('view-gallery').classList.remove('hidden');
+        document.getElementById('stickyBar').classList.remove('hidden');
+        this.renderProds();
+        this.load();
+        this.updateSticky();
+    },
+
+    nav(d){
+        this.idx = (this.idx + d + fotos.length) % fotos.length;
+        this.load();
+    },
+
+    load(){
+        document.getElementById('imgMain').src = fotos[this.idx];
+        document.getElementById('counter').innerText = `${this.idx+1} / ${fotos.length}`;
+        
+        // Renderiza inputs desta foto
+        this.refreshInputs();
+
+        // Lógica do Botão Finalizar (Só na ultima foto)
+        if(this.idx === fotos.length - 1) {
+            document.getElementById('btnFinish').classList.remove('hidden');
+        } else {
+            document.getElementById('btnFinish').classList.add('hidden');
+        }
+    },
+
+    renderProds(){
+        let html = '';
+        produtos.forEach(p => {
+            let safe = p.nome.replace(/\s/g,'');
+            // Verifica se tem crédito
+            let cred = creditos.find(c=>c.nome===p.nome);
+            let labelCred = cred ? `<span style="color:blue; font-size:10px">(${cred.qtd} Créditos)</span>` : '';
+            
+            html += `
+            <div class="prod-item">
+                <div>
+                    <div style="font-weight:bold; font-size:14px">${p.nome} ${labelCred}</div>
+                    <div style="font-size:12px; color:#888">${BRL(p.preco)}</div>
+                </div>
+                <div class="ctrl">
+                    <button onclick="app.chg('${p.nome}', -1)">-</button>
+                    <span id="val_${safe}" style="font-weight:bold; width:20px; text-align:center">0</span>
+                    <button onclick="app.chg('${p.nome}', 1)">+</button>
+                </div>
+            </div>`;
+        });
+        document.getElementById('prodsArea').innerHTML = html;
+    },
+
+    refreshInputs(){
+        let extras = this.sel[this.idx].extras;
+        produtos.forEach(p => {
+            let safe = p.nome.replace(/\s/g,'');
+            document.getElementById(`val_${safe}`).innerText = extras[p.nome] || 0;
+        });
+    },
+
+    chg(name, d){
+        let extras = this.sel[this.idx].extras;
+        let curr = extras[name] || 0;
+        let next = Math.max(0, curr + d);
+        
+        if(next === 0) delete extras[name];
+        else extras[name] = next;
+        
+        this.refreshInputs();
+        this.updateSticky();
+    },
+
+    calcTotal(){
+        let total = 0;
+        let counts = {};
+        let totalItems = 0;
+
+        // Soma tudo
+        this.sel.forEach(s => {
+            Object.entries(s.extras).forEach(([nm, qtd]) => {
+                counts[nm] = (counts[nm]||0) + qtd;
+                let prod = produtos.find(p=>p.nome===nm);
+                if(prod) {
+                    total += prod.preco * qtd;
+                    totalItems += qtd;
+                }
+            });
+        });
+
+        // Abate Créditos
+        creditos.forEach(c => {
+            if(counts[c.nome]) {
+                let p = produtos.find(x=>x.nome===c.nome);
+                if(p) {
+                    let free = Math.min(counts[c.nome], c.qtd);
+                    total -= free * p.preco;
+                }
+            }
+        });
+
+        return { total, items: totalItems, rawCounts: counts };
+    },
+
+    updateSticky(){
+        let data = this.calcTotal();
+        let saldo = data.total - entrada; // Subtrai entrada
+
+        document.getElementById('stickQtd').innerText = data.items;
+        
+        let elTotal = document.getElementById('stickTotal');
+        if(saldo < 0) {
+            elTotal.innerHTML = `Crédito: <span style="color:#2da44e">${BRL(Math.abs(saldo))}</span>`;
+        } else {
+            elTotal.innerHTML = `Total: <span style="color:#333">${BRL(saldo)}</span>`;
+        }
+    },
+
+    finish(){
+        let data = this.calcTotal();
+        let saldo = data.total - entrada;
+        
+        let txt = "*Novo Pedido*\n\n";
+        let html = "";
+        
+        Object.entries(data.rawCounts).forEach(([nm, qtd])=>{
+            txt += `${qtd}x ${nm}\n`;
+            html += `<div>${qtd}x ${nm}</div>`;
+        });
+
+        if(entrada > 0) txt += `\nEntrada já paga: -${BRL(entrada)}`;
+        txt += `\n*Valor Final: ${BRL(saldo)}*`;
+
+        document.getElementById('view-gallery').classList.add('hidden');
+        document.getElementById('stickyBar').classList.add('hidden');
+        document.getElementById('view-summary').classList.remove('hidden');
+        
+        document.getElementById('summaryList').innerHTML = html || "Nenhum item selecionado.";
+        document.getElementById('finalTotalDisplay').innerText = "Total: " + BRL(saldo);
+        
+        if(saldo < 0) document.getElementById('finalTotalDisplay').style.color = "green";
+        
+        document.getElementById('btnWhats').href = `https://wa.me/5542998370150?text=${encodeURIComponent(txt)}`;
+    }
+};
+
+window.onload = ()=>app.init();
+</script>
+</body>
+</html>

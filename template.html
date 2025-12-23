@@ -5,281 +5,421 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>Galeria Studio NBV</title>
   <style>
-    /* TEMA CLARO FORÇADO */
     :root {
-      --bg: #f9f9f9; --card: #ffffff; --text: #333333; --border: #e0e0e0;
-      --brand: #2da44e; --accent: #0969da; --warning: #d29922;
+      --bg: #f6f8fa; --card: #ffffff; --text: #24292f; --border: #d0d7de;
+      --brand: #2da44e; --brand-hover: #2c974b; --accent: #0969da;
+      --warning: #d29922; --danger: #cf222e;
     }
-    body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-    
-    /* Sticky Footer */
-    .sticky-bar { 
-        position: fixed; bottom: 0; left: 0; right: 0; 
-        background: #fff; border-top: 1px solid var(--brand); 
-        padding: 15px; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-        display: flex; justify-content: space-between; align-items: center;
-    }
-    .sticky-total { font-weight: bold; font-size: 16px; }
-    .sticky-neg { color: var(--brand); } /* Crédito */
-    .sticky-pos { color: #333; } /* A Pagar */
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    .main { flex: 1; overflow-y: auto; padding: 15px; padding-bottom: 80px; /* Espaço pra barra */ }
+    /* LAYOUT GERAL (RESPONSIVIDADE) */
+    .main-container { flex: 1; overflow: hidden; position: relative; }
+    
+    /* Layout Desktop (Grid) */
+    .gallery-grid { 
+        display: grid; 
+        grid-template-columns: 1fr 360px; /* Foto | Barra Lateral */
+        height: 100%; 
+    }
+    
+    /* Layout Mobile */
+    @media(max-width: 768px) { 
+      .gallery-grid { display: flex; flex-direction: column; overflow-y: auto; } 
+      .photo-area { height: 50vh !important; flex-shrink: 0; }
+      .sidebar { height: auto !important; overflow: visible !important; padding-bottom: 80px; } /* Espaço pro footer */
+    }
+
+    /* ÁREA DA FOTO */
+    .photo-area { 
+        background: #e1e4e8; 
+        position: relative; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        height: 100%; 
+        overflow: hidden;
+    }
+    .photo-area img { max-width: 100%; max-height: 100%; object-fit: contain; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.9); border: 1px solid var(--border); width: 45px; height: 45px; border-radius: 50%; font-size: 24px; cursor: pointer; color: var(--text); z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; transition: .2s; }
+    .nav-btn:hover { background: #fff; transform: translateY(-50%) scale(1.1); }
+    .nav-left { left: 15px; } .nav-right { right: 15px; }
+
+    /* BARRA LATERAL (CONTROLES) */
+    .sidebar { 
+        background: var(--card); 
+        border-left: 1px solid var(--border); 
+        padding: 20px; 
+        overflow-y: auto; 
+        display: flex; 
+        flex-direction: column; 
+        gap: 15px;
+    }
+
+    /* PRODUTOS */
+    .prod-group { margin-bottom: 15px; }
+    .prod-title { font-size: 11px; font-weight: bold; text-transform: uppercase; color: #57606a; margin-bottom: 8px; letter-spacing: 0.5px; }
+    
+    .prod-item { 
+        display: flex; justify-content: space-between; align-items: center; 
+        padding: 12px; border: 1px solid var(--border); border-radius: 8px; 
+        margin-bottom: 8px; background: #fff; transition: .2s;
+    }
+    .prod-item.highlight { border-color: var(--accent); background: #f0f6fc; }
+    .prod-item.hidden-item { display: none !important; }
+    
+    .prod-info div:first-child { font-weight: 600; font-size: 14px; }
+    .prod-info div:last-child { font-size: 12px; color: #57606a; margin-top: 2px; }
+    
+    /* Stepper (+/-) */
+    .stepper { display: flex; align-items: center; background: #f6f8fa; border-radius: 6px; border: 1px solid var(--border); }
+    .stepper button { width: 32px; height: 32px; border: none; background: none; font-size: 16px; cursor: pointer; color: var(--text); }
+    .stepper span { width: 30px; text-align: center; font-weight: bold; font-size: 14px; }
+    .stepper.active { background: #dafbe1; border-color: var(--brand); color: var(--brand); }
+
+    /* TELAS GERAIS (INICIO / RESUMO) */
+    .full-screen-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 100; overflow-y: auto; padding: 20px; }
+    .card-box { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 0 auto 15px; max-width: 500px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
     .hidden { display: none !important; }
 
-    /* Cards */
-    .card { background: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 8px; margin-bottom: 10px; }
-    .btn { background: var(--brand); color: #fff; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; display: block; text-align: center; text-decoration: none; }
+    .btn { width: 100%; padding: 15px; border-radius: 8px; border: none; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; display: block; text-align: center; text-decoration: none; }
+    .btn-primary { background: var(--brand); color: white; }
+    .btn-whats { background: #25D366; color: white; }
+    .btn-sec { background: #f6f8fa; border: 1px solid var(--border); color: var(--text); }
+
+    /* FOOTER FIXO */
+    .sticky-footer { 
+        position: fixed; bottom: 0; left: 0; right: 0; 
+        background: #fff; border-top: 1px solid var(--border); 
+        padding: 15px 20px; z-index: 50; 
+        display: flex; justify-content: space-between; align-items: center;
+        box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
+    }
+    .total-price { font-size: 18px; font-weight: bold; }
     
-    /* Start Info */
-    .start-info { background: #fffbe6; border: 1px solid #ffe58f; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
-    .start-info h3 { margin: 0 0 10px 0; font-size: 15px; color: #d48806; }
-    .start-list { list-style: none; padding: 0; margin: 0; }
-    .start-list li { margin-bottom: 5px; border-bottom: 1px dashed #eee; padding-bottom: 5px; }
-
-    /* Galeria */
-    .photo-frame { height: 60vh; background: #eee; display: flex; align-items: center; justify-content: center; position: relative; border-radius: 8px; overflow: hidden; }
-    .photo-frame img { max-width: 100%; max-height: 100%; }
-    .nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.8); border: 1px solid #ccc; width: 40px; height: 40px; border-radius: 50%; font-size: 20px; cursor: pointer; }
-    .nav-left { left: 10px; } .nav-right { right: 10px; }
-
-    /* Produtos */
-    .prod-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
-    .ctrl { display: flex; align-items: center; gap: 10px; }
-    .ctrl button { width: 30px; height: 30px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; }
+    /* Brinde/Aviso Digital */
+    .digital-badge { font-size: 10px; background: #ddf4ff; color: var(--accent); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(9,105,218,0.2); margin-left: 5px; }
   </style>
 </head>
 <body>
 
-<div class="main">
-    <div id="view-start" style="max-width: 400px; margin: 30px auto;">
-        <h2 style="text-align:center; color:var(--brand)">Olá! Bem-vindo(a).</h2>
-        <p style="text-align:center; color:#666; font-size:14px">Confira o que preparamos para você.</p>
-        
-        <div class="start-info" id="startInfoBox">
-            <h3>🎁 Seus Créditos e Pagamentos:</h3>
-            <ul class="start-list" id="startList"></ul>
+<div id="view-start" class="full-screen-overlay">
+    <div style="max-width:400px; margin:40px auto; text-align:center">
+        <h2 style="color:var(--brand); margin-bottom:5px">Bem-vindo!</h2>
+        <p style="color:#57606a; margin-bottom:30px">Escolha como deseja prosseguir.</p>
+
+        <div id="startInfo" class="card-box hidden" style="background:#fffbe6; border-color:#d4a72c; text-align:left">
+            <h4 style="margin:0 0 10px 0; color:#9a6700">🎁 Seus Créditos:</h4>
+            <ul id="startList" style="margin:0; padding-left:20px; font-size:13px; color:#333"></ul>
         </div>
 
-        <div class="card" onclick="app.setMode('album')" style="cursor:pointer; border-left:4px solid var(--brand)">
-            <strong>📚 Montar Fotolivro</strong><br>
-            <small style="color:#666">Escolher fotos para o álbum.</small>
-        </div>
-        <div class="card" onclick="app.setMode('avulso')" style="cursor:pointer; border-left:4px solid var(--accent)">
-            <strong>📸 Revelação / Arquivos</strong><br>
-            <small style="color:#666">Apenas fotos avulsas ou download.</small>
-        </div>
-    </div>
-
-    <div id="view-gallery" class="hidden">
-        <div style="text-align:center; margin-bottom:10px; font-weight:bold" id="counter">1 / 10</div>
-        
-        <div class="photo-frame">
-            <button class="nav-btn nav-left" onclick="app.nav(-1)">❮</button>
-            <img id="imgMain" src="">
-            <button class="nav-btn nav-right" onclick="app.nav(1)">❯</button>
+        <div class="card-box" onclick="app.setMode('album')" style="cursor:pointer; border-left:4px solid var(--brand); text-align:left">
+            <strong style="font-size:16px">📚 Montar Fotolivro</strong><br>
+            <span style="font-size:13px; color:#57606a">Selecionar fotos para compor o álbum.</span>
         </div>
 
-        <div id="prodsArea" style="margin-top:20px; background:#fff; padding:15px; border-radius:8px; border:1px solid #eee">
-            </div>
-
-        <button id="btnFinish" class="btn hidden" style="margin-top:20px; background:#333" onclick="app.finish()">✅ Finalizar Seleção</button>
-    </div>
-
-    <div id="view-summary" class="hidden" style="max-width: 500px; margin: 0 auto">
-        <h2>Resumo do Pedido</h2>
-        <div class="card" id="summaryList"></div>
-        <div style="text-align:right; font-size:18px; font-weight:bold" id="finalTotalDisplay"></div>
-        <a id="btnWhats" target="_blank" class="btn" style="background:#25D366; margin-top:15px">Enviar no WhatsApp</a>
-        <button class="btn" style="background:#666; margin-top:10px" onclick="location.reload()">Voltar</button>
+        <div class="card-box" onclick="app.setMode('avulso')" style="cursor:pointer; border-left:4px solid var(--accent); text-align:left">
+            <strong style="font-size:16px">📸 Revelações Avulsas</strong><br>
+            <span style="font-size:13px; color:#57606a">Apenas fotos impressas, quadros ou arquivos.</span>
+        </div>
     </div>
 </div>
 
-<div id="stickyBar" class="sticky-bar hidden">
-    <div style="font-size:12px; color:#666">
-        Selecionados: <strong id="stickQtd" style="color:#000">0</strong>
+<div id="view-gallery" class="main-container hidden">
+    <div class="gallery-grid">
+        <div class="photo-area">
+            <button class="nav-btn nav-left" onclick="app.nav(-1)">❮</button>
+            <img id="imgMain" src="">
+            <button class="nav-btn nav-right" onclick="app.nav(1)">❯</button>
+            <div style="position:absolute; bottom:15px; background:rgba(255,255,255,0.9); padding:4px 10px; border-radius:20px; font-size:12px; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.1)" id="imgName">foto.jpg</div>
+        </div>
+
+        <div class="sidebar">
+            <div style="text-align:center; font-size:12px; color:#57606a; margin-bottom:10px" id="counter">1 / 100</div>
+            
+            <div id="dynamicProds">
+                </div>
+
+            <button id="btnFinish" class="btn hidden" style="background:#24292f; margin-top:20px" onclick="app.finish()">✅ Finalizar Seleção</button>
+        </div>
     </div>
-    <div class="sticky-total" id="stickTotal">R$ 0,00</div>
+</div>
+
+<div id="stickyFooter" class="sticky-footer hidden">
+    <div style="font-size:12px; color:#57606a">
+        <span id="stickQtd" style="font-weight:bold; color:#000; font-size:14px">0</span> itens
+    </div>
+    <div class="total-price" id="stickTotal">R$ 0,00</div>
+</div>
+
+<div id="view-summary" class="full-screen-overlay hidden">
+    <div style="max-width:500px; margin:20px auto">
+        <h2>Resumo do Pedido</h2>
+        <div class="card-box" id="summaryContent"></div>
+        <div style="text-align:right; font-size:20px; font-weight:bold; margin-bottom:20px" id="finalTotal"></div>
+        <a id="btnWhats" target="_blank" class="btn btn-whats">Enviar Pedido no WhatsApp</a>
+        <button class="btn btn-sec" onclick="location.reload()">Voltar</button>
+    </div>
 </div>
 
 <script>
 // DATA_INJECTION_POINT
 
+// Helpers de Texto e Formatação
 const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const cleanName = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
+const getDim = (name) => {
+  const match = name.match(/\d+x\d+/i);
+  return match ? match[0].toLowerCase() : null;
+};
+const isDigitalProduct = (name) => cleanName(name).includes('arquivo') || cleanName(name).includes('digital');
+const isPrintProduct = (name) => cleanName(name).includes('foto') || cleanName(name).includes('revel');
+const isFrameProduct = (name) => cleanName(name).includes('porta') || cleanName(name).includes('moldura');
 
 const app = {
     idx: 0,
-    mode: '',
     sel: [],
+    mode: 'avulso',
 
-    init(){
-        if(!fotos.length) return alert("Sem fotos!");
-        this.sel = fotos.map(()=>({ extras:{} }));
-
-        // Preenche Tela Inicial
-        const list = document.getElementById('startList');
-        let hasInfo = false;
+    init() {
+        if(!fotos.length) return alert("Galeria Vazia");
+        this.sel = fotos.map(()=>({ extras: {} })); // Inicializa array de seleção
         
-        if(entrada > 0) {
-            list.innerHTML += `<li>✅ Entrada Paga: <strong>${BRL(entrada)}</strong></li>`;
-            hasInfo = true;
+        // Configura Tela Inicial (Resumo de Créditos)
+        if(entrada > 0 || creditos.length > 0) {
+            document.getElementById('startInfo').classList.remove('hidden');
+            const list = document.getElementById('startList');
+            if(entrada > 0) list.innerHTML += `<li>✅ Entrada Paga: <strong>${BRL(entrada)}</strong></li>`;
+            creditos.forEach(c => list.innerHTML += `<li>🎁 Crédito: <strong>${c.qtd}x ${c.nome}</strong></li>`);
         }
-        if(creditos && creditos.length > 0) {
-            creditos.forEach(c => {
-                list.innerHTML += `<li>🎁 Ganhou: <strong>${c.qtd}x ${c.nome}</strong></li>`;
-            });
-            hasInfo = true;
-        }
-        if(!hasInfo) document.getElementById('startInfoBox').style.display = 'none';
     },
 
-    setMode(m){
+    setMode(m) {
         this.mode = m;
         document.getElementById('view-start').classList.add('hidden');
         document.getElementById('view-gallery').classList.remove('hidden');
-        document.getElementById('stickyBar').classList.remove('hidden');
-        this.renderProds();
+        document.getElementById('stickyFooter').classList.remove('hidden');
+        this.renderSidebar();
         this.load();
-        this.updateSticky();
     },
 
-    nav(d){
+    nav(d) {
         this.idx = (this.idx + d + fotos.length) % fotos.length;
         this.load();
     },
 
-    load(){
-        document.getElementById('imgMain').src = fotos[this.idx];
-        document.getElementById('counter').innerText = `${this.idx+1} / ${fotos.length}`;
+    load() {
+        const url = fotos[this.idx];
+        document.getElementById('imgMain').src = url;
+        document.getElementById('imgName').innerText = url.split('/').pop();
+        document.getElementById('counter').innerText = `${this.idx + 1} / ${fotos.length}`;
         
-        // Renderiza inputs desta foto
-        this.refreshInputs();
-
-        // Lógica do Botão Finalizar (Só na ultima foto)
-        if(this.idx === fotos.length - 1) {
-            document.getElementById('btnFinish').classList.remove('hidden');
-        } else {
-            document.getElementById('btnFinish').classList.add('hidden');
-        }
-    },
-
-    renderProds(){
-        let html = '';
-        produtos.forEach(p => {
-            let safe = p.nome.replace(/\s/g,'');
-            // Verifica se tem crédito
-            let cred = creditos.find(c=>c.nome===p.nome);
-            let labelCred = cred ? `<span style="color:blue; font-size:10px">(${cred.qtd} Créditos)</span>` : '';
-            
-            html += `
-            <div class="prod-item">
-                <div>
-                    <div style="font-weight:bold; font-size:14px">${p.nome} ${labelCred}</div>
-                    <div style="font-size:12px; color:#888">${BRL(p.preco)}</div>
-                </div>
-                <div class="ctrl">
-                    <button onclick="app.chg('${p.nome}', -1)">-</button>
-                    <span id="val_${safe}" style="font-weight:bold; width:20px; text-align:center">0</span>
-                    <button onclick="app.chg('${p.nome}', 1)">+</button>
-                </div>
-            </div>`;
-        });
-        document.getElementById('prodsArea').innerHTML = html;
-    },
-
-    refreshInputs(){
-        let extras = this.sel[this.idx].extras;
-        produtos.forEach(p => {
-            let safe = p.nome.replace(/\s/g,'');
-            document.getElementById(`val_${safe}`).innerText = extras[p.nome] || 0;
-        });
-    },
-
-    chg(name, d){
-        let extras = this.sel[this.idx].extras;
-        let curr = extras[name] || 0;
-        let next = Math.max(0, curr + d);
+        // Atualiza a lógica de visibilidade (frames/digital) para a foto atual
+        this.updateLogic();
         
+        // Botão Finalizar apenas na última foto
+        if(this.idx === fotos.length - 1) document.getElementById('btnFinish').classList.remove('hidden');
+        else document.getElementById('btnFinish').classList.add('hidden');
+    },
+
+    // --- RENDERIZAÇÃO INICIAL DA BARRA LATERAL ---
+    renderSidebar() {
+        const container = document.getElementById('dynamicProds');
+        container.innerHTML = '';
+        
+        // Separa em Grupos
+        const grps = { 'Revelações': [], 'Porta Retratos': [], 'Outros': [] };
+        produtos.forEach(p => {
+            if(isFrameProduct(p.nome)) grps['Porta Retratos'].push(p);
+            else if(isPrintProduct(p.nome)) grps['Revelações'].push(p);
+            else grps['Outros'].push(p);
+        });
+
+        const mkGroup = (title, items) => {
+            if(!items.length) return;
+            let html = `<div class="prod-group"><div class="prod-title">${title}</div>`;
+            items.forEach(p => {
+                const safe = p.nome.replace(/\s/g,'');
+                // Se tem crédito, mostra badge
+                const cred = creditos.find(c=>c.nome===p.nome);
+                let badge = cred ? `<span class="digital-badge">${cred.qtd} un. crédito</span>` : '';
+
+                html += `
+                <div class="prod-item" id="row_${safe}" data-name="${p.nome}">
+                    <div class="prod-info">
+                        <div>${p.nome} ${badge}</div>
+                        <div>${BRL(p.preco)}</div>
+                        <div class="msg-logic" style="font-size:10px; color:#2da44e; display:none"></div>
+                    </div>
+                    <div class="stepper" id="stp_${safe}">
+                        <button onclick="app.chg('${p.nome}', -1)">−</button>
+                        <span id="val_${safe}">0</span>
+                        <button onclick="app.chg('${p.nome}', 1)">+</button>
+                    </div>
+                </div>`;
+            });
+            html += `</div>`;
+            container.innerHTML += html;
+        };
+
+        mkGroup('Revelações', grps['Revelações']);
+        mkGroup('Molduras & Porta Retratos', grps['Porta Retratos']);
+        mkGroup('Arquivos & Outros', grps['Outros']);
+    },
+
+    // --- CORE LOGIC: MUDANÇA DE VALOR ---
+    chg(name, d) {
+        const extras = this.sel[this.idx].extras;
+        const cur = extras[name] || 0;
+        let next = Math.max(0, cur + d);
+
+        // Regra Digital: Máximo 1
+        if(isDigitalProduct(name)) next = Math.min(next, 1);
+
         if(next === 0) delete extras[name];
         else extras[name] = next;
+
+        this.updateLogic();
+    },
+
+    // --- CORE LOGIC: REGRAS DE VISIBILIDADE E BLOQUEIO ---
+    updateLogic() {
+        const extras = this.sel[this.idx].extras;
         
-        this.refreshInputs();
+        // 1. Verifica se tem alguma revelação selecionada nesta foto
+        const hasPrint = Object.keys(extras).some(k => isPrintProduct(k) && extras[k] > 0);
+
+        produtos.forEach(p => {
+            const safe = p.nome.replace(/\s/g,'');
+            const row = document.getElementById(`row_${safe}`);
+            const stepper = document.getElementById(`stp_${safe}`);
+            const valSpan = document.getElementById(`val_${safe}`);
+            const msgBox = row.querySelector('.msg-logic');
+            
+            if(!row) return;
+
+            let val = extras[p.nome] || 0;
+            
+            // LÓGICA PORTA RETRATO (Aparece somente se tiver foto do mesmo tamanho)
+            if(isFrameProduct(p.nome)) {
+                const dim = getDim(p.nome);
+                const matchingPrint = Object.keys(extras).some(k => isPrintProduct(k) && getDim(k) === dim && extras[k] > 0);
+                
+                if(matchingPrint) {
+                    row.classList.remove('hidden-item');
+                    row.classList.add('highlight'); // Destaca para incentivar venda
+                } else {
+                    row.classList.add('hidden-item');
+                    if(val > 0) { delete extras[p.nome]; val = 0; } // Reseta se sumir
+                }
+            }
+
+            // LÓGICA ARQUIVO DIGITAL (Bloqueia se tiver revelação)
+            if(isDigitalProduct(p.nome)) {
+                if(hasPrint) {
+                    // Opção A: Esconde (como pedido)
+                    row.classList.add('hidden-item');
+                    
+                    // Se quiser mostrar como "Incluso" em vez de esconder, comente a linha acima e descomente abaixo:
+                    // stepper.style.visibility = 'hidden';
+                    // msgBox.style.display = 'block';
+                    // msgBox.innerText = "Incluso na revelação!";
+                    
+                    if(val > 0) { delete extras[p.nome]; val = 0; }
+                } else {
+                    row.classList.remove('hidden-item');
+                    stepper.style.visibility = 'visible';
+                    msgBox.style.display = 'none';
+                }
+            }
+
+            // Atualiza UI do Stepper
+            valSpan.innerText = val;
+            if(val > 0) stepper.classList.add('active');
+            else stepper.classList.remove('active');
+        });
+
         this.updateSticky();
     },
 
-    calcTotal(){
-        let total = 0;
-        let counts = {};
-        let totalItems = 0;
+    // --- CÁLCULO FINANCEIRO ---
+    calcTotal() {
+        let total = 0; 
+        let itemsCount = 0;
+        let summary = {};
 
-        // Soma tudo
+        // Soma Bruta
         this.sel.forEach(s => {
             Object.entries(s.extras).forEach(([nm, qtd]) => {
-                counts[nm] = (counts[nm]||0) + qtd;
-                let prod = produtos.find(p=>p.nome===nm);
-                if(prod) {
-                    total += prod.preco * qtd;
-                    totalItems += qtd;
+                let prd = produtos.find(p=>p.nome===nm);
+                if(prd) {
+                    total += prd.preco * qtd;
+                    itemsCount += qtd;
+                    summary[nm] = (summary[nm]||0) + qtd;
                 }
             });
         });
 
-        // Abate Créditos
+        // Abate Créditos/Brindes
         creditos.forEach(c => {
-            if(counts[c.nome]) {
-                let p = produtos.find(x=>x.nome===c.nome);
-                if(p) {
-                    let free = Math.min(counts[c.nome], c.qtd);
-                    total -= free * p.preco;
-                }
+            if(summary[c.nome]) {
+                let free = Math.min(summary[c.nome], c.qtd);
+                let prd = produtos.find(p=>p.nome===c.nome);
+                if(prd) total -= (free * prd.preco);
             }
         });
 
-        return { total, items: totalItems, rawCounts: counts };
+        return { total, itemsCount, summary };
     },
 
-    updateSticky(){
-        let data = this.calcTotal();
-        let saldo = data.total - entrada; // Subtrai entrada
-
-        document.getElementById('stickQtd').innerText = data.items;
+    updateSticky() {
+        const data = this.calcTotal();
+        const final = data.total - entrada; // Abate entrada
         
-        let elTotal = document.getElementById('stickTotal');
-        if(saldo < 0) {
-            elTotal.innerHTML = `Crédito: <span style="color:#2da44e">${BRL(Math.abs(saldo))}</span>`;
+        document.getElementById('stickQtd').innerText = data.itemsCount;
+        const elTotal = document.getElementById('stickTotal');
+        
+        if(final < 0) {
+            elTotal.innerHTML = `Crédito: <span style="color:var(--brand)">${BRL(Math.abs(final))}</span>`;
         } else {
-            elTotal.innerHTML = `Total: <span style="color:#333">${BRL(saldo)}</span>`;
+            elTotal.innerHTML = `Total: ${BRL(final)}`;
         }
     },
 
-    finish(){
-        let data = this.calcTotal();
-        let saldo = data.total - entrada;
+    finish() {
+        const data = this.calcTotal();
+        const final = data.total - entrada;
         
-        let txt = "*Novo Pedido*\n\n";
-        let html = "";
-        
-        Object.entries(data.rawCounts).forEach(([nm, qtd])=>{
-            txt += `${qtd}x ${nm}\n`;
-            html += `<div>${qtd}x ${nm}</div>`;
+        let html = '';
+        let txtWhats = "*Novo Pedido Studio NBV*\n\n";
+
+        Object.entries(data.summary).forEach(([nm, qtd]) => {
+            html += `<div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px dashed #eee">
+                <span>${qtd}x ${nm}</span>
+            </div>`;
+            txtWhats += `${qtd}x ${nm}\n`;
         });
 
-        if(entrada > 0) txt += `\nEntrada já paga: -${BRL(entrada)}`;
-        txt += `\n*Valor Final: ${BRL(saldo)}*`;
+        if(entrada > 0) {
+            html += `<div style="color:var(--brand); margin-top:10px">Entrada Paga: -${BRL(entrada)}</div>`;
+            txtWhats += `\nEntrada já paga: -${BRL(entrada)}`;
+        }
 
+        txtWhats += `\n*TOTAL FINAL: ${BRL(final)}*`;
+        
         document.getElementById('view-gallery').classList.add('hidden');
-        document.getElementById('stickyBar').classList.add('hidden');
+        document.getElementById('stickyFooter').classList.add('hidden');
         document.getElementById('view-summary').classList.remove('hidden');
         
-        document.getElementById('summaryList').innerHTML = html || "Nenhum item selecionado.";
-        document.getElementById('finalTotalDisplay').innerText = "Total: " + BRL(saldo);
-        
-        if(saldo < 0) document.getElementById('finalTotalDisplay').style.color = "green";
-        
-        document.getElementById('btnWhats').href = `https://wa.me/5542998370150?text=${encodeURIComponent(txt)}`;
+        document.getElementById('summaryContent').innerHTML = html || "Nenhum item selecionado.";
+        document.getElementById('finalTotal').innerText = "A Pagar: " + BRL(final);
+        if(final < 0) document.getElementById('finalTotal').innerText = "Crédito: " + BRL(Math.abs(final));
+
+        document.getElementById('btnWhats').href = `https://wa.me/5542998370150?text=${encodeURIComponent(txtWhats)}`;
     }
 };
 
-window.onload = ()=>app.init();
+window.onload = () => app.init();
 </script>
 </body>
 </html>

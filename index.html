@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Studio NBV • Gerador GitHub</title>
+    <script src="database.js"></script>
+    <style>
+        :root { --brand: #238636; --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #c9d1d9; }
+        body { font-family: monospace; background: var(--bg); color: var(--text); padding: 20px; max-width: 800px; margin: 0 auto; }
+        .card { background: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        h2 { margin-top: 0; color: #fff; font-size: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        label { display: block; margin-top: 10px; font-weight: bold; color: #fff; }
+        input, textarea { width: 100%; padding: 8px; margin-top: 5px; background: #010409; border: 1px solid var(--border); color: #fff; border-radius: 4px; font-family: inherit; }
+        button { background: var(--brand); color: #fff; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        button:hover { opacity: 0.9; }
+        .status { margin-top: 10px; padding: 10px; border-radius: 4px; display: none; text-align: center; }
+        .success { background: rgba(35,134,54,0.2); color: #3fb950; border: 1px solid #238636; }
+        .error { background: rgba(218,54,51,0.2); color: #f85149; border: 1px solid #da3633; }
+        
+        .config-row { display: flex; gap: 10px; }
+        .config-row > div { flex: 1; }
+    </style>
+</head>
+<body>
+
+<h1>🚀 Painel de Controle - Studio NBV</h1>
+
+<div class="card">
+    <h2>🔐 Configuração do GitHub</h2>
+    <input type="password" id="ghToken" placeholder="Token Pessoal (ghp_...)" onchange="saveConfig()">
+    <div class="config-row">
+        <div><label>Usuário GitHub</label><input type="text" id="ghUser" placeholder="ex: thiagonbv" onchange="saveConfig()"></div>
+        <div><label>Repositório</label><input type="text" id="ghRepo" placeholder="ex: galeria-clientes" onchange="saveConfig()"></div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>👤 Dados do Cliente</h2>
+    <label>Nome do Cliente (Será o link: /clientes/nome-cliente)</label>
+    <input type="text" id="clientName" placeholder="ex: maria-formatura">
+    
+    <label>Links das Fotos (um por linha)</label>
+    <textarea id="photos" rows="5" placeholder="https://..."></textarea>
+</div>
+
+<div class="card">
+    <h2>⚙️ Ajustes do Pedido (Carregado do Database.js)</h2>
+    <div class="config-row">
+        <div><label>Fotos Inclusas no Album</label><input type="number" id="albIncluso"></div>
+        <div><label>Valor Extra Album</label><input type="number" id="albExtra"></div>
+    </div>
+    <div class="config-row">
+        <div><label>Entrada (Sinal)</label><input type="number" id="valEntrada" value="0"></div>
+    </div>
+    <label>Créditos Especiais (JSON)</label>
+    <textarea id="jsonCredits" rows="2"></textarea>
+</div>
+
+<button onclick="deploy()">CRIAR GALERIA E PUBLICAR 🌍</button>
+
+<div id="statusBox" class="status"></div>
+<div id="finalLink" class="status success" style="margin-top:10px"></div>
+
+<script>
+    // 1. Carregar Configurações Iniciais
+    window.onload = () => {
+        // Carrega do LocalStorage (GitHub Info)
+        if(localStorage.getItem('ghToken')) document.getElementById('ghToken').value = localStorage.getItem('ghToken');
+        if(localStorage.getItem('ghUser')) document.getElementById('ghUser').value = localStorage.getItem('ghUser');
+        if(localStorage.getItem('ghRepo')) document.getElementById('ghRepo').value = localStorage.getItem('ghRepo');
+
+        // Carrega do Database.js (Preços)
+        if(typeof DB_CONFIG !== 'undefined') {
+            document.getElementById('albIncluso').value = DB_CONFIG.album.incluso;
+            document.getElementById('albExtra').value = DB_CONFIG.album.extra;
+            document.getElementById('jsonCredits').value = JSON.stringify(DB_CONFIG.creditos);
+        } else {
+            alert("Erro: database.js não encontrado!");
+        }
+    };
+
+    function saveConfig() {
+        localStorage.setItem('ghToken', document.getElementById('ghToken').value);
+        localStorage.setItem('ghUser', document.getElementById('ghUser').value);
+        localStorage.setItem('ghRepo', document.getElementById('ghRepo').value);
+    }
+
+    function showStatus(msg, type) {
+        const el = document.getElementById('statusBox');
+        el.style.display = 'block';
+        el.className = 'status ' + type;
+        el.innerText = msg;
+    }
+
+    // Função para codificar UTF-8 em Base64 corretamente (evita erro de acentuação)
+    function utf8_to_b64(str) {
+        return window.btoa(unescape(encodeURIComponent(str)));
+    }
+
+    async function deploy() {
+        const token = document.getElementById('ghToken').value;
+        const user = document.getElementById('ghUser').value;
+        const repo = document.getElementById('ghRepo').value;
+        const clientName = document.getElementById('clientName').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+        
+        if(!token || !user || !repo || !clientName) return alert("Preencha todos os campos!");
+
+        showStatus("⏳ Lendo template e gerando arquivo...", "success");
+
+        try {
+            // 1. Ler o Template.html
+            const response = await fetch('template.html');
+            if(!response.ok) throw new Error("Não foi possível ler o template.html");
+            let htmlContent = await response.text();
+
+            // 2. Preparar Dados
+            const fotosArr = document.getElementById('photos').value.split('\n').filter(x=>x.trim()).map(x=>`"${x.trim()}"`).join(',');
+            const creditsArr = document.getElementById('jsonCredits').value || "[]";
+            
+            // Usamos os dados do input, mas a tabela de preços vem do DB_CONFIG global
+            const injection = `
+            let fotos = [${fotosArr}];
+            let albumConfig = { incluso: ${document.getElementById('albIncluso').value}, extra: ${document.getElementById('albExtra').value} };
+            let produtos = ${JSON.stringify(DB_CONFIG.produtos)};
+            let creditos = ${creditsArr};
+            let entrada = ${document.getElementById('valEntrada').value};
+            let calculoConfig = ${JSON.stringify(DB_CONFIG.calculo)};
+            `;
+
+            // 3. Injetar no HTML
+            const finalHtml = htmlContent.replace('// DATA_INJECTION_POINT', injection);
+
+            // 4. Enviar para GitHub
+            showStatus("☁️ Enviando para o GitHub...", "success");
+            
+            const path = `clientes/${clientName}.html`;
+            const apiUrl = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
+            const message = `Nova galeria: ${clientName}`;
+            const contentBase64 = utf8_to_b64(finalHtml);
+
+            // Verifica se arquivo já existe para pegar o SHA (update)
+            let sha = null;
+            try {
+                const check = await fetch(apiUrl, { headers: { Authorization: `token ${token}` } });
+                if(check.ok) {
+                    const data = await check.json();
+                    sha = data.sha;
+                }
+            } catch(e) {}
+
+            const body = {
+                message: message,
+                content: contentBase64,
+                branch: "main" // ou master
+            };
+            if(sha) body.sha = sha;
+
+            const putResponse = await fetch(apiUrl, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+
+            if(!putResponse.ok) throw new Error("Erro ao salvar no GitHub: " + putResponse.statusText);
+
+            // 5. Sucesso
+            const publicLink = `https://${user}.github.io/${repo}/clientes/${clientName}.html`;
+            
+            showStatus("✅ Sucesso! Galeria Criada.", "success");
+            const linkBox = document.getElementById('finalLink');
+            linkBox.style.display = 'block';
+            linkBox.innerHTML = `Link do Cliente: <a href="${publicLink}" target="_blank" style="color:#fff;font-weight:bold">${publicLink}</a>`;
+
+        } catch (err) {
+            console.error(err);
+            showStatus("❌ Erro: " + err.message, "error");
+        }
+    }
+</script>
+
+</body>
+</html>

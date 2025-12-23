@@ -3,23 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Studio NBV • Master V9</title>
+    <title>Painel Studio NBV • Master V10</title>
     <script src="database.js"></script>
     <style>
         :root { --brand: #2da44e; --bg: #f6f8fa; --card: #ffffff; --border: #d0d7de; --text: #24292f; --accent: #0969da; --danger: #cf222e; }
         body { font-family: -apple-system, monospace; background: var(--bg); color: var(--text); padding: 20px; max-width: 900px; margin: 0 auto; }
         .card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 15px; overflow: hidden; }
-        .card-header { padding: 15px; background: #f6f8fa; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+        .card-header { padding: 15px; background: #f6f8fa; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 600; user-select: none; }
         .card-body { padding: 20px; display: none; }
         .card-body.show { display: block; }
-        input, select, textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; margin-top: 5px; font-family: monospace; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; margin-top: 5px; font-family: monospace; box-sizing: border-box; }
         .btn { padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px; border: none; }
         .btn-primary { background: var(--brand); color: #fff; }
         .btn-save { background: var(--accent); color: #fff; }
         .btn-danger { background: #fff0f0; color: var(--danger); border: 1px solid var(--danger); }
         .btn-mini { width: auto; padding: 5px 10px; margin: 0; font-size: 12px; background:#eee; border:1px solid #ccc; cursor:pointer;}
         .row { display: flex; gap: 15px; } .col { flex: 1; }
-        .drop-zone { border: 2px dashed var(--border); padding: 40px; text-align: center; background: #fff; cursor: pointer; border-radius: 6px; }
+        
+        /* Drag Zone Corrigida */
+        .drop-zone { border: 2px dashed var(--border); padding: 40px; text-align: center; background: #fff; cursor: pointer; border-radius: 6px; transition: .2s; }
+        .drop-zone.dragover { background: #dafbe1; border-color: var(--brand); transform: scale(1.02); }
+        
         .progress-bar { height: 10px; background: #eee; border-radius: 5px; overflow: hidden; margin-top: 15px; display:none; }
         .progress-fill { height: 100%; background: var(--brand); width: 0%; transition: width .2s; }
         .final-link { background: #ddf4ff; padding: 20px; text-align: center; display: none; margin-top: 20px; border: 1px solid var(--accent); border-radius: 6px; }
@@ -28,7 +32,7 @@
 </head>
 <body>
 
-<h1>🚀 Studio NBV • Master V9 (Ref. Architecture)</h1>
+<h1>🚀 Studio NBV • Master V10</h1>
 
 <div class="card">
     <div class="card-header" onclick="toggle('ghConfig', this)">🔐 GitHub ▼</div>
@@ -55,10 +59,11 @@
         </div>
         <textarea id="txtTable" rows="8" placeholder="30x40, 20, 592, 754..."></textarea>
 
-        <h3>3. Padrão</h3>
+        <h3>3. Padrão Global</h3>
+        <p style="font-size:12px; color:#666">Estes valores serão usados em todas as novas galerias.</p>
         <div class="row">
-            <div class="col"><label>Inclusas</label><input type="number" id="dbIncluso"></div>
-            <div class="col"><label>Extra (R$)</label><input type="number" id="dbExtra"></div>
+            <div class="col"><label>Inclusas (Padrão)</label><input type="number" id="dbIncluso"></div>
+            <div class="col"><label>Extra (R$ Padrão)</label><input type="number" id="dbExtra"></div>
         </div>
         <button class="btn btn-save" onclick="savePricesToGitHub()">💾 SALVAR TUDO</button>
     </div>
@@ -68,9 +73,11 @@
     <div class="card-header active" style="background:#fff" onclick="toggle('generator', this)">📸 Nova Galeria ▼</div>
     <div id="generator" class="card-body show">
         <label>Nome (URL)</label><input type="text" id="clientName" placeholder="maria-15anos">
+        
         <label>Fotos</label>
-        <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">Clique ou Arraste Fotos</div>
         <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="handleFiles(this.files)">
+        <div class="drop-zone" id="dropZone">📂 Clique ou Arraste as Fotos Aqui</div>
+        
         <div id="statusBox" style="margin-top:10px; font-weight:bold; color:var(--brand); display:none"></div>
         <div class="progress-bar" id="progBar"><div class="progress-fill" id="progFill"></div></div>
 
@@ -83,9 +90,7 @@
         <div id="giftDisplay" style="margin-top:10px; display:flex; gap:5px; flex-wrap:wrap"></div>
 
         <div class="row">
-            <div class="col"><label>Álbum (Inclusas)</label><input type="number" id="albIncluso"></div>
-            <div class="col"><label>Extra (R$)</label><input type="number" id="albExtra"></div>
-            <div class="col"><label>Sinal (R$)</label><input type="number" id="valEntrada" value="0"></div>
+            <div class="col"><label>Sinal Pago (R$)</label><input type="number" id="valEntrada" value="0"></div>
         </div>
 
         <button class="btn btn-primary" id="btnDeploy" onclick="deploy()">🚀 CRIAR GALERIA</button>
@@ -116,17 +121,49 @@ window.onload=()=>{
         }
         document.getElementById('dbIncluso').value=DB_CONFIG.album.incluso;
         document.getElementById('dbExtra').value=DB_CONFIG.album.extra;
-        document.getElementById('albIncluso').value=DB_CONFIG.album.incluso;
-        document.getElementById('albExtra').value=DB_CONFIG.album.extra;
         let s=document.getElementById('giftSelector');
         DB_CONFIG.produtos.forEach(p=>{let o=document.createElement('option');o.value=p.nome;o.innerText=p.nome;s.appendChild(o)});
     }
+    
+    // Configura Drag & Drop Robusto
+    const dz = document.getElementById('dropZone');
+    const fi = document.getElementById('fileInput');
+    
+    dz.addEventListener('click', () => fi.click());
+    
+    dz.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dz.classList.add('dragover');
+    });
+    
+    dz.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dz.classList.remove('dragover');
+    });
+    
+    dz.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dz.classList.remove('dragover');
+        if(e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFiles(e.dataTransfer.files);
+        }
+    });
 }
 
 function toggle(id,h){ let el=document.getElementById(id); if(el.classList.contains('show')){el.classList.remove('show');}else{el.classList.add('show');} }
 function addProductRow(n,p){ let d=document.createElement('div');d.className='prod-row';d.style.marginBottom='5px';d.innerHTML=`<input type="text" class="inp-name" value="${n}" placeholder="Nome" style="width:60%"><input type="number" class="inp-price" value="${p}" placeholder="R$" style="width:25%"><button class="btn-mini btn-danger" onclick="this.parentElement.remove()" style="width:10%">X</button>`;document.getElementById('visualList').appendChild(d); }
 function addGift(){ let s=document.getElementById('giftSelector'), q=document.getElementById('giftQtd'); if(!s.value)return; clientGifts.push({nome:s.value,qtd:parseInt(q.value)}); document.getElementById('giftDisplay').innerHTML+=`<span style="background:#0969da;color:white;padding:4px 8px;border-radius:12px;font-size:12px">${q.value}x ${s.value}</span>`; }
-function handleFiles(f){ selectedFiles=Array.from(f); document.getElementById('statusBox').style.display='block'; document.getElementById('statusBox').innerText=`✅ ${selectedFiles.length} FOTOS`; document.getElementById('dropZone').style.display='none'; }
+
+function handleFiles(f){ 
+    selectedFiles=Array.from(f); 
+    document.getElementById('statusBox').style.display='block'; 
+    document.getElementById('statusBox').innerText=`✅ ${selectedFiles.length} FOTOS CARREGADAS`; 
+    document.getElementById('dropZone').innerText = `✅ ${selectedFiles.length} fotos prontas. (Arraste mais se quiser)`;
+    document.getElementById('dropZone').style.background = '#f0fff4';
+}
 
 async function savePricesToGitHub(){
     let prods=[]; document.querySelectorAll('.prod-row').forEach(r=>{let n=r.querySelector('.inp-name').value, p=parseFloat(r.querySelector('.inp-price').value); if(n) prods.push({nome:n,preco:p});});
@@ -166,8 +203,10 @@ async function deploy(){
             fileNames.push(f.name);
         }
 
-        // GERAÇÃO DO HTML LEVE (REFERENCE ARCHITECTURE)
-        // Aqui está a mágica: Ele não gera o HTML inteiro, só os dados e links para engine.js/style.css
+        // Pega os valores do PADRÃO para injetar no cliente (já que removemos os inputs locais)
+        let configIncluso = document.getElementById('dbIncluso').value;
+        let configExtra = document.getElementById('dbExtra').value;
+
         let htmlLeve = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -178,13 +217,12 @@ async function deploy(){
 </head>
 <body>
     <script>
-        // DADOS ESPECÍFICOS DESTE CLIENTE
         const CLIENT_DATA = {
             fotos: [${fileNames.map(f=>`"${f}"`).join(',')}],
             produtos: ${JSON.stringify(DB_CONFIG.produtos)},
             creditos: ${JSON.stringify(clientGifts)},
             entrada: ${document.getElementById('valEntrada').value},
-            albumConfig: { incluso: ${document.getElementById('albIncluso').value}, extra: ${document.getElementById('albExtra').value} }
+            albumConfig: { incluso: ${configIncluso}, extra: ${configExtra} }
         };
     <\/script>
     <script src="../../engine.js"><\/script>
@@ -193,7 +231,7 @@ async function deploy(){
 
         let hPath=`clientes/${name}/index.html`;
         let hSha=null; try{let c=await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${hPath}`,{headers:{Authorization:`token ${token}`}}); if(c.ok)hSha=(await c.json()).sha;}catch(e){}
-        await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${hPath}`,{method:'PUT',headers:{Authorization:`token ${token}`},body:JSON.stringify({message:`HTML V9`,content:btoa(unescape(encodeURIComponent(htmlLeve))),sha:hSha,branch:'main'})});
+        await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${hPath}`,{method:'PUT',headers:{Authorization:`token ${token}`},body:JSON.stringify({message:`HTML V10`,content:btoa(unescape(encodeURIComponent(htmlLeve))),sha:hSha,branch:'main'})});
 
         fill.style.width='100%';
         let link=`https://${user}.github.io/${repo}/clientes/${name}/`;

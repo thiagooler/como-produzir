@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Studio NBV • Master V10</title>
+    <title>Painel Studio NBV • Master V18</title>
     <script src="database.js"></script>
     <style>
         :root { --brand: #2da44e; --bg: #f6f8fa; --card: #ffffff; --border: #d0d7de; --text: #24292f; --accent: #0969da; --danger: #cf222e; }
@@ -19,11 +19,8 @@
         .btn-danger { background: #fff0f0; color: var(--danger); border: 1px solid var(--danger); }
         .btn-mini { width: auto; padding: 5px 10px; margin: 0; font-size: 12px; background:#eee; border:1px solid #ccc; cursor:pointer;}
         .row { display: flex; gap: 15px; } .col { flex: 1; }
-        
-        /* Drag Zone Corrigida */
         .drop-zone { border: 2px dashed var(--border); padding: 40px; text-align: center; background: #fff; cursor: pointer; border-radius: 6px; transition: .2s; }
         .drop-zone.dragover { background: #dafbe1; border-color: var(--brand); transform: scale(1.02); }
-        
         .progress-bar { height: 10px; background: #eee; border-radius: 5px; overflow: hidden; margin-top: 15px; display:none; }
         .progress-fill { height: 100%; background: var(--brand); width: 0%; transition: width .2s; }
         .final-link { background: #ddf4ff; padding: 20px; text-align: center; display: none; margin-top: 20px; border: 1px solid var(--accent); border-radius: 6px; }
@@ -32,7 +29,7 @@
 </head>
 <body>
 
-<h1>🚀 Studio NBV • Master V10</h1>
+<h1>🚀 Studio NBV • Master V18</h1>
 
 <div class="card">
     <div class="card-header" onclick="toggle('ghConfig', this)">🔐 GitHub ▼</div>
@@ -60,7 +57,6 @@
         <textarea id="txtTable" rows="8" placeholder="30x40, 20, 592, 754..."></textarea>
 
         <h3>3. Padrão Global</h3>
-        <p style="font-size:12px; color:#666">Estes valores serão usados em todas as novas galerias.</p>
         <div class="row">
             <div class="col"><label>Inclusas (Padrão)</label><input type="number" id="dbIncluso"></div>
             <div class="col"><label>Extra (R$ Padrão)</label><input type="number" id="dbExtra"></div>
@@ -72,7 +68,8 @@
 <div class="card">
     <div class="card-header active" style="background:#fff" onclick="toggle('generator', this)">📸 Nova Galeria ▼</div>
     <div id="generator" class="card-body show">
-        <label>Nome (URL)</label><input type="text" id="clientName" placeholder="maria-15anos">
+        <label>Nome do Cliente (Ex: Maria 15 Anos)</label>
+        <input type="text" id="clientName" placeholder="Maria 15 Anos">
         
         <label>Fotos</label>
         <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="handleFiles(this.files)">
@@ -125,32 +122,12 @@ window.onload=()=>{
         DB_CONFIG.produtos.forEach(p=>{let o=document.createElement('option');o.value=p.nome;o.innerText=p.nome;s.appendChild(o)});
     }
     
-    // Configura Drag & Drop Robusto
     const dz = document.getElementById('dropZone');
     const fi = document.getElementById('fileInput');
-    
     dz.addEventListener('click', () => fi.click());
-    
-    dz.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        dz.classList.add('dragover');
-    });
-    
-    dz.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        dz.classList.remove('dragover');
-    });
-    
-    dz.addEventListener('drop', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        dz.classList.remove('dragover');
-        if(e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            handleFiles(e.dataTransfer.files);
-        }
-    });
+    dz.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); dz.classList.add('dragover'); });
+    dz.addEventListener('dragleave', (e) => { e.preventDefault(); e.stopPropagation(); dz.classList.remove('dragover'); });
+    dz.addEventListener('drop', (e) => { e.preventDefault(); e.stopPropagation(); dz.classList.remove('dragover'); if(e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files); });
 }
 
 function toggle(id,h){ let el=document.getElementById(id); if(el.classList.contains('show')){el.classList.remove('show');}else{el.classList.add('show');} }
@@ -161,7 +138,7 @@ function handleFiles(f){
     selectedFiles=Array.from(f); 
     document.getElementById('statusBox').style.display='block'; 
     document.getElementById('statusBox').innerText=`✅ ${selectedFiles.length} FOTOS CARREGADAS`; 
-    document.getElementById('dropZone').innerText = `✅ ${selectedFiles.length} fotos prontas. (Arraste mais se quiser)`;
+    document.getElementById('dropZone').innerText = `✅ ${selectedFiles.length} fotos.`;
     document.getElementById('dropZone').style.background = '#f0fff4';
 }
 
@@ -185,8 +162,10 @@ async function savePricesToGitHub(){
 
 async function deploy(){
     let token=document.getElementById('ghToken').value, user=document.getElementById('ghUser').value, repo=document.getElementById('ghRepo').value;
-    let name=document.getElementById('clientName').value.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-');
-    if(!name || !selectedFiles.length) return alert("Falta nome ou fotos!");
+    let rawName=document.getElementById('clientName').value.trim();
+    let urlName=rawName.toLowerCase().replace(/[^a-z0-9-]/g,'-');
+    
+    if(!rawName || !selectedFiles.length) return alert("Falta nome ou fotos!");
     
     document.getElementById('progBar').style.display='block';
     document.getElementById('btnDeploy').disabled=true;
@@ -197,27 +176,28 @@ async function deploy(){
         for(let i=0; i<selectedFiles.length; i++){
             let f=selectedFiles[i]; fill.style.width=((i/selectedFiles.length)*90)+'%';
             let reader=new FileReader(); let b64=await new Promise(r=>{reader.onload=()=>r(reader.result.split(',')[1]);reader.readAsDataURL(f)});
-            let path=`clientes/${name}/${f.name}`;
+            let path=`clientes/${urlName}/${f.name}`;
             let sha=null; try{let c=await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`,{headers:{Authorization:`token ${token}`}}); if(c.ok)sha=(await c.json()).sha;}catch(e){}
             await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`,{method:'PUT',headers:{Authorization:`token ${token}`},body:JSON.stringify({message:`Img`,content:b64,sha:sha,branch:'main'})});
             fileNames.push(f.name);
         }
 
-        // Pega os valores do PADRÃO para injetar no cliente (já que removemos os inputs locais)
         let configIncluso = document.getElementById('dbIncluso').value;
         let configExtra = document.getElementById('dbExtra').value;
 
+        // INCLUI clientName no objeto de dados
         let htmlLeve = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>Galeria ${name}</title>
+    <title>${rawName} - Studio NBV</title>
     <link rel="stylesheet" href="../../style.css"> 
 </head>
 <body>
     <script>
         const CLIENT_DATA = {
+            clientName: "${rawName}",
             fotos: [${fileNames.map(f=>`"${f}"`).join(',')}],
             produtos: ${JSON.stringify(DB_CONFIG.produtos)},
             creditos: ${JSON.stringify(clientGifts)},
@@ -229,12 +209,12 @@ async function deploy(){
 </body>
 </html>`;
 
-        let hPath=`clientes/${name}/index.html`;
+        let hPath=`clientes/${urlName}/index.html`;
         let hSha=null; try{let c=await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${hPath}`,{headers:{Authorization:`token ${token}`}}); if(c.ok)hSha=(await c.json()).sha;}catch(e){}
-        await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${hPath}`,{method:'PUT',headers:{Authorization:`token ${token}`},body:JSON.stringify({message:`HTML V10`,content:btoa(unescape(encodeURIComponent(htmlLeve))),sha:hSha,branch:'main'})});
+        await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${hPath}`,{method:'PUT',headers:{Authorization:`token ${token}`},body:JSON.stringify({message:`HTML V18`,content:btoa(unescape(encodeURIComponent(htmlLeve))),sha:hSha,branch:'main'})});
 
         fill.style.width='100%';
-        let link=`https://${user}.github.io/${repo}/clientes/${name}/`;
+        let link=`https://${user}.github.io/${repo}/clientes/${urlName}/`;
         document.getElementById('finalLink').style.display='block';
         document.getElementById('finalLink').innerHTML=`<a href="${link}" target="_blank">ABRIR GALERIA</a>`;
     } catch(e){ alert("Erro: "+e.message); } finally { document.getElementById('btnDeploy').disabled=false; }

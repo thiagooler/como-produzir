@@ -1,4 +1,4 @@
-/* ARQUIVO: style.css (V17 - Destravado) */
+/* ARQUIVO: style.css (V18 - Final) */
 :root {
   --bg: #f6f8fa; --card: #ffffff; --text: #24292f; --border: #d0d7de;
   --brand: #2da44e; --brand-hover: #2c974b; --accent: #0969da;
@@ -24,31 +24,37 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 .nav-btn:hover { background: #fff; transform: translateY(-50%) scale(1.1); }
 .nav-left { left: 15px; } .nav-right { right: 15px; }
 
-/* OVERLAYS NA FOTO */
+/* STATUS VISUAL */
 .status-overlay { position: absolute; font-size: 18px; font-weight: bold; padding: 10px 20px; border-radius: 8px; transform: rotate(-5deg); display: none; background: rgba(255,255,255,0.9); border: 2px solid; pointer-events: none; z-index: 5; }
 .status-overlay.in-album { color: var(--brand); border-color: var(--brand); display: block; }
 .status-overlay.out-album { color: var(--danger); border-color: var(--danger); display: block; transform: rotate(5deg); }
 
-/* SIDEBAR & PRODUTOS */
+/* SIDEBAR */
 .sidebar { background: var(--card); border-left: 1px solid var(--border); padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; z-index: 20; position: relative; }
 .prod-group { margin-bottom: 15px; }
 .prod-title { font-size: 11px; font-weight: bold; text-transform: uppercase; color: #57606a; margin-bottom: 8px; }
 
+/* ITEM PRODUTO - LOGICA DE CLIQUE */
 .prod-item { 
     display: flex; justify-content: space-between; align-items: center; 
     padding: 12px; border: 1px solid var(--border); border-radius: 8px; 
     margin-bottom: 8px; background: #fff; transition: .2s; 
-    cursor: pointer; position: relative;
+    position: relative; 
 }
-/* CORREÇÃO CRÍTICA: Permite clique mesmo desativado */
 .prod-item.highlight { border-color: var(--accent); background: #f0f6fc; }
 .prod-item.hidden-item { display: none !important; }
-.prod-item.disabled { opacity: 0.5; filter: grayscale(100%); background: #f9f9f9; }
 
-.stepper { display: flex; align-items: center; background: #f6f8fa; border-radius: 6px; border: 1px solid var(--border); }
-.stepper button { width: 32px; height: 32px; border: none; background: none; font-size: 16px; cursor: pointer; color: var(--text); z-index: 5; }
+/* Item desabilitado (foto descartada), mas permite clicar no stepper */
+.prod-item.disabled { opacity: 0.5; background: #f4f4f4; } 
+.prod-item.disabled .prod-info { opacity: 0.5; } /* Texto apagado */
+.prod-item.disabled .stepper { opacity: 1; pointer-events: auto; background: #fff; } /* Botão aceso */
+
+.stepper { display: flex; align-items: center; background: #f6f8fa; border-radius: 6px; border: 1px solid var(--border); overflow: hidden; }
+.stepper button { width: 35px; height: 35px; border: none; background: #fff; font-size: 18px; cursor: pointer; color: var(--text); display: flex; align-items: center; justify-content: center; transition: .1s; }
+.stepper button:active { background: #eee; }
 .stepper span { width: 30px; text-align: center; font-weight: bold; font-size: 14px; }
 .stepper.active { background: #dafbe1; border-color: var(--brand); color: var(--brand); }
+.stepper.active button { color: var(--brand); background: #f0fff4; }
 
 /* MODALS */
 .full-screen-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 100; overflow-y: auto; padding: 20px; }
@@ -57,13 +63,13 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 .hidden { display: none !important; } 
 
 /* CARTÕES INICIAIS */
-.start-card { cursor: pointer; text-align: left; transition: transform .2s; border-left: 4px solid #ccc; margin-bottom: 10px; display: block; width: 100%; text-decoration: none; color: inherit; position: relative; z-index: 10; }
+.start-card { cursor: pointer; text-align: left; transition: transform .2s; border-left: 4px solid #ccc; margin-bottom: 10px; display: block; width: 100%; text-decoration: none; color: inherit; position: relative; }
 .start-card:hover { transform: scale(1.02); }
 .start-card.album { border-color: var(--brand); }
 .start-card.avulso { border-color: var(--accent); }
 .start-card.digital { border-color: #d4a72c; background: #fffdf5; }
 
-/* BOTÕES */
+/* BOTÕES GERAIS */
 .btn { width: 100%; padding: 15px; border-radius: 8px; border: none; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; display: block; text-align: center; text-decoration: none; }
 .btn-primary { background: var(--brand); color: white; }
 .btn-whats { background: #25D366; color: white; }
@@ -74,6 +80,8 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 .btn-toggle-album.no { border-color: var(--danger); background: #fff0f0; color: #cf222e; margin-top: 10px; }
 .btn-toggle-album.no.active { background: var(--danger); color: white; }
 #btnFinish { background-color: var(--brand) !important; color: white !important; margin-top: 20px; }
+.btn-discard { background: white; border: 1px solid var(--danger); color: var(--danger); transition: .2s; }
+.btn-discard:hover, .btn-discard.active { background: var(--danger); color: white; }
 
 /* FOOTER */
 .sticky-footer { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid var(--border); padding: 15px 20px; z-index: 50; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -4px 12px rgba(0,0,0,0.05); }

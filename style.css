@@ -1,4 +1,4 @@
-/* ARQUIVO: style.css (V14) */
+/* ARQUIVO: style.css (V15) */
 :root {
   --bg: #f6f8fa; --card: #ffffff; --text: #24292f; --border: #d0d7de;
   --brand: #2da44e; --brand-hover: #2c974b; --accent: #0969da;
@@ -33,15 +33,15 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 .sidebar { background: var(--card); border-left: 1px solid var(--border); padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
 .prod-group { margin-bottom: 15px; }
 .prod-title { font-size: 11px; font-weight: bold; text-transform: uppercase; color: #57606a; margin-bottom: 8px; }
-.prod-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; background: #fff; transition: .2s; cursor: pointer; }
-/* Correção do travamento: garantir pointer-events */
-.prod-item { pointer-events: auto; } 
+
+/* Correção de Clique V15 */
+.prod-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; background: #fff; transition: .2s; cursor: pointer; position: relative; pointer-events: auto !important; }
 .prod-item.highlight { border-color: var(--accent); background: #f0f6fc; }
 .prod-item.hidden-item { display: none !important; }
-.prod-item.disabled { opacity: 0.4; pointer-events: none; }
+.prod-item.disabled { opacity: 0.4; pointer-events: none !important; filter: grayscale(100%); }
 
-.stepper { display: flex; align-items: center; background: #f6f8fa; border-radius: 6px; border: 1px solid var(--border); }
-.stepper button { width: 32px; height: 32px; border: none; background: none; font-size: 16px; cursor: pointer; color: var(--text); }
+.stepper { display: flex; align-items: center; background: #f6f8fa; border-radius: 6px; border: 1px solid var(--border); pointer-events: auto; }
+.stepper button { width: 32px; height: 32px; border: none; background: none; font-size: 16px; cursor: pointer; color: var(--text); z-index: 5; }
 .stepper span { width: 30px; text-align: center; font-weight: bold; font-size: 14px; }
 .stepper.active { background: #dafbe1; border-color: var(--brand); color: var(--brand); }
 
@@ -52,11 +52,11 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 .hidden { display: none !important; }
 
 /* Start Cards */
-.start-card { cursor: pointer; text-align: left; transition: transform .2s; border-left: 4px solid #ccc; }
+.start-card { cursor: pointer; text-align: left; transition: transform .2s; border-left: 4px solid #ccc; margin-bottom: 10px; display: block; width: 100%; text-decoration: none; color: inherit; }
 .start-card:hover { transform: scale(1.02); }
 .start-card.album { border-color: var(--brand); }
 .start-card.avulso { border-color: var(--accent); }
-.start-card.digital { border-color: #d4a72c; }
+.start-card.digital { border-color: #d4a72c; background: #fffdf5; }
 
 /* Botões Album Toggle */
 .btn-toggle-album { padding: 15px; border-radius: 8px; border: 2px solid; font-weight: bold; cursor: pointer; transition: .2s; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px; width: 100%; }
@@ -70,7 +70,7 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 .btn-primary { background: var(--brand); color: white; }
 .btn-whats { background: #25D366; color: white; }
 .btn-sec { background: #f6f8fa; border: 1px solid var(--border); color: var(--text); }
-.rec-price { font-size: 18px; font-weight: 900; color: var(--text); margin-top: 5px; }
+#btnFinish { background-color: var(--brand) !important; color: white !important; margin-top: 20px; }
 
 /* Footer e Resumo */
 .sticky-footer { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid var(--border); padding: 15px 20px; z-index: 50; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -4px 12px rgba(0,0,0,0.05); }

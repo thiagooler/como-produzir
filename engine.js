@@ -1,4 +1,4 @@
-/* ARQUIVO: engine.js - Lógica Central V18 */
+/* ARQUIVO: engine.js - Lógica Central V19 (Bugfix Critical) */
 
 const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const cleanName = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -58,7 +58,7 @@ const BASE_HTML = `
             </div>
 
             <div id="controlsAvulso" class="hidden">
-                <button id="btnDiscard" class="btn btn-discard" style="width:100%; margin-bottom:15px" onclick="app.toggleDiscard()">🗑️ DESCARTAR FOTO</button>
+                <button id="btnDiscard" class="btn-toggle-album no" style="margin-bottom:15px" onclick="app.toggleDiscard()">🗑️ DESCARTAR FOTO</button>
                 <div id="dynamicProds"></div>
             </div>
 
@@ -123,8 +123,10 @@ const app = {
         document.body.innerHTML = BASE_HTML;
         if(typeof CLIENT_DATA === 'undefined') return alert("Erro de Dados.");
         
-        // Define o nome no cabeçalho
-        if(CLIENT_DATA.clientName) document.getElementById('welcomeTitle').innerText = `Olá, ${CLIENT_DATA.clientName}!`;
+        // Verifica se existe o nome e atualiza
+        if(CLIENT_DATA.clientName) {
+            document.getElementById('welcomeTitle').innerText = `Olá, ${CLIENT_DATA.clientName}!`;
+        }
 
         this.fotos = CLIENT_DATA.fotos;
         this.produtos = CLIENT_DATA.produtos;
@@ -173,9 +175,12 @@ const app = {
     checkAllDigital() {
         const dig = this.produtos.find(p => isDigitalProduct(p.nome));
         const rev = this.produtos.find(p => p.nome.includes('10x15'));
+        
         if(!dig) return alert("Produto 'Arquivo Digital' não cadastrado no painel.");
+        
         document.getElementById('priceDig').innerText = BRL(dig.preco);
         if(rev) document.getElementById('priceRev').innerText = BRL(rev.preco);
+        
         document.getElementById('modalDigitalWarn').classList.remove('hidden');
     },
 
@@ -230,18 +235,16 @@ const app = {
         if(s.isRemoved && this.idx < this.fotos.length-1) setTimeout(()=>this.nav(1), 300);
     },
 
-    // --- NOVA FUNÇÃO DE MUDANÇA USANDO INDEX ---
+    // Ação de clique do produto
     chg(prodIdx, d) {
-        const p = this.produtos[prodIdx]; // Pega produto pelo índice
+        const p = this.produtos[prodIdx];
         const name = p.nome;
         const s = this.sel[this.idx];
         
-        // Se clicar no produto, reseta descarte
-        if(d > 0) s.isRemoved = false;
+        if(d > 0) s.isRemoved = false; // Ressuscita foto
 
         const cur = s.extras[name] || 0;
         let next = Math.max(0, cur + d);
-        
         if(isDigitalProduct(name)) next = Math.min(next, 1);
         if(next === 0) delete s.extras[name];
         else s.extras[name] = next;
@@ -278,7 +281,8 @@ const app = {
             } else {
                 btnDisc.classList.remove('active'); btnDisc.innerText = "🗑️ Descartar Foto";
             }
-            this.updateSidebarAvulso();
+            // AQUI ESTAVA O ERRO: Chamava updateSidebarAvulso que não existia mais
+            this.renderSidebarAvulso(); 
             this.updateStickyAvulso();
         }
     },
@@ -303,11 +307,10 @@ const app = {
 
     renderSidebarAvulso() {
         const container = document.getElementById('dynamicProds');
-        // Renderiza apenas se vazio (Performance)
         if(container.innerHTML === '') { 
              const grps = { 'Revelações': [], 'Porta Retratos': [], 'Outros': [] };
             this.produtos.forEach((p, i) => {
-                p.originalIndex = i; // Guarda índice original
+                p.originalIndex = i; // Salva o índice para uso no onclick
                 if(isFrameProduct(p.nome)) grps['Porta Retratos'].push(p);
                 else if(isPrintProduct(p.nome)) grps['Revelações'].push(p);
                 else grps['Outros'].push(p);
@@ -316,10 +319,10 @@ const app = {
                 if(!items.length) return;
                 let html = `<div class="prod-group"><div class="prod-title">${title}</div>`;
                 items.forEach(p => {
-                    const safe = p.originalIndex; // ID baseado no índice numérico (VITAL)
+                    const safe = p.originalIndex;
                     const cred = this.creditos.find(c=>c.nome===p.nome);
                     let badge = cred ? `<span class="digital-badge">${cred.qtd} un. crédito</span>` : '';
-                    // onclick usa o índice numérico agora
+                    
                     html += `<div class="prod-item" id="row_${safe}">
                         <div class="prod-info"><div>${p.nome} ${badge}</div><div>${BRL(p.preco)}</div></div>
                         <div class="stepper" id="stp_${safe}">
@@ -341,7 +344,7 @@ const app = {
         const hasPrint = Object.keys(extras).some(k => isPrintProduct(k) && extras[k] > 0);
 
         this.produtos.forEach((p, i) => {
-            const safe = i; // ID numérico
+            const safe = i;
             const el = document.getElementById(`val_${safe}`);
             const row = document.getElementById(`row_${safe}`);
             
@@ -352,7 +355,6 @@ const app = {
                     row.classList.add('disabled');
                 } else {
                     row.classList.remove('disabled');
-                    
                     if(isDigitalProduct(p.nome) && hasPrint) row.classList.add('hidden-item');
                     else if(isDigitalProduct(p.nome)) row.classList.remove('hidden-item');
                     
@@ -390,7 +392,6 @@ const app = {
             const rules = this.calculoConfig.regras || {}; 
             const photosPerPage = rules[sz] || 4; 
             const neededPages = Math.ceil(count / photosPerPage);
-            
             const matches = this.calculoConfig.tabela.filter(t => t.size === sz && t.pages >= neededPages);
             matches.sort((a,b) => a.price - b.price);
             

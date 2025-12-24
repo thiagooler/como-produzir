@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Studio NBV • Master V18</title>
+    <title>Painel Studio NBV • Master V19</title>
     <script src="database.js"></script>
     <style>
         :root { --brand: #2da44e; --bg: #f6f8fa; --card: #ffffff; --border: #d0d7de; --text: #24292f; --accent: #0969da; --danger: #cf222e; }
@@ -29,7 +29,7 @@
 </head>
 <body>
 
-<h1>🚀 Studio NBV • Master V18</h1>
+<h1>🚀 Studio NBV • Master V19 (Link Seguro)</h1>
 
 <div class="card">
     <div class="card-header" onclick="toggle('ghConfig', this)">🔐 GitHub ▼</div>
@@ -70,6 +70,7 @@
     <div id="generator" class="card-body show">
         <label>Nome do Cliente (Ex: Maria 15 Anos)</label>
         <input type="text" id="clientName" placeholder="Maria 15 Anos">
+        <p style="font-size:11px; color:#666; margin-top:2px">⚠️ Será adicionado um código único ao link para evitar duplicidade.</p>
         
         <label>Fotos</label>
         <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="handleFiles(this.files)">
@@ -163,9 +164,13 @@ async function savePricesToGitHub(){
 async function deploy(){
     let token=document.getElementById('ghToken').value, user=document.getElementById('ghUser').value, repo=document.getElementById('ghRepo').value;
     let rawName=document.getElementById('clientName').value.trim();
-    let urlName=rawName.toLowerCase().replace(/[^a-z0-9-]/g,'-');
     
     if(!rawName || !selectedFiles.length) return alert("Falta nome ou fotos!");
+    
+    // --- GERAÇÃO DE SUFIXO ÚNICO ---
+    // Cria um código aleatório de 4 caracteres (ex: a1b2)
+    let uniqueId = Math.random().toString(36).substring(2, 6);
+    let urlName = rawName.toLowerCase().replace(/[^a-z0-9-]/g,'-') + '-' + uniqueId;
     
     document.getElementById('progBar').style.display='block';
     document.getElementById('btnDeploy').disabled=true;
@@ -177,21 +182,20 @@ async function deploy(){
             let f=selectedFiles[i]; fill.style.width=((i/selectedFiles.length)*90)+'%';
             let reader=new FileReader(); let b64=await new Promise(r=>{reader.onload=()=>r(reader.result.split(',')[1]);reader.readAsDataURL(f)});
             let path=`clientes/${urlName}/${f.name}`;
-            let sha=null; try{let c=await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`,{headers:{Authorization:`token ${token}`}}); if(c.ok)sha=(await c.json()).sha;}catch(e){}
-            await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`,{method:'PUT',headers:{Authorization:`token ${token}`},body:JSON.stringify({message:`Img`,content:b64,sha:sha,branch:'main'})});
+            // Não precisa checar SHA pois a pasta é garantidamente nova
+            await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`,{method:'PUT',headers:{Authorization:`token ${token}`},body:JSON.stringify({message:`Img`,content:b64,branch:'main'})});
             fileNames.push(f.name);
         }
 
         let configIncluso = document.getElementById('dbIncluso').value;
         let configExtra = document.getElementById('dbExtra').value;
 
-        // INCLUI clientName no objeto de dados
         let htmlLeve = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>${rawName} - Studio NBV</title>
+    <title>${rawName}</title>
     <link rel="stylesheet" href="../../style.css"> 
 </head>
 <body>
@@ -210,13 +214,12 @@ async function deploy(){
 </html>`;
 
         let hPath=`clientes/${urlName}/index.html`;
-        let hSha=null; try{let c=await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${hPath}`,{headers:{Authorization:`token ${token}`}}); if(c.ok)hSha=(await c.json()).sha;}catch(e){}
-        await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${hPath}`,{method:'PUT',headers:{Authorization:`token ${token}`},body:JSON.stringify({message:`HTML V18`,content:btoa(unescape(encodeURIComponent(htmlLeve))),sha:hSha,branch:'main'})});
+        await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${hPath}`,{method:'PUT',headers:{Authorization:`token ${token}`},body:JSON.stringify({message:`HTML V19`,content:btoa(unescape(encodeURIComponent(htmlLeve))),branch:'main'})});
 
         fill.style.width='100%';
         let link=`https://${user}.github.io/${repo}/clientes/${urlName}/`;
         document.getElementById('finalLink').style.display='block';
-        document.getElementById('finalLink').innerHTML=`<a href="${link}" target="_blank">ABRIR GALERIA</a>`;
+        document.getElementById('finalLink').innerHTML=`<a href="${link}" target="_blank">ABRIR GALERIA (${rawName})</a>`;
     } catch(e){ alert("Erro: "+e.message); } finally { document.getElementById('btnDeploy').disabled=false; }
 }
 

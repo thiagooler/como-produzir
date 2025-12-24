@@ -1,4 +1,4 @@
-/* ARQUIVO: engine.js - Lógica Central V15 (Full Fix) */
+/* ARQUIVO: engine.js - Lógica Central V16 (Correção Final) */
 
 const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const cleanName = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -81,7 +81,7 @@ const BASE_HTML = `
             A Revelação 10x15 custa <span id="priceRev">R$ -</span> e <strong>você ganha o arquivo de brinde!</strong><br><br>
             Compensa mais fazer a revelação. Deseja mudar?
         </p>
-        <button class="btn btn-primary" onclick="app.setMode('avulso'); document.getElementById('modalDigitalWarn').classList.add('hidden')">Mudar para Revelações</button>
+        <button class="btn btn-primary" onclick="app.confirmSwitchToAvulso()">Mudar para Revelações</button>
         <button class="btn btn-sec" onclick="app.applyAllDigital()">Não, quero só os Arquivos</button>
     </div>
 </div>
@@ -131,7 +131,6 @@ const app = {
         this.albumConfig = CLIENT_DATA.albumConfig || { incluso: 0, extra: 0 };
         this.calculoConfig = CLIENT_DATA.calculoConfig || { regras:{}, tabela:[] };
 
-        // Inicializa com isRemoved false e extras vazio
         this.sel = this.fotos.map(()=>({ inAlbum: false, extras: {}, isRemoved: false }));
         
         if(this.albumConfig.incluso > 0) {
@@ -164,7 +163,7 @@ const app = {
             document.getElementById('controlsAlbum').classList.add('hidden');
             document.getElementById('controlsAvulso').classList.remove('hidden');
             document.getElementById('footerText').innerText = "Total Extras";
-            this.renderSidebarAvulso(); // Renderiza controles
+            this.renderSidebarAvulso();
         }
         this.load();
     },
@@ -182,30 +181,27 @@ const app = {
         document.getElementById('modalDigitalWarn').classList.remove('hidden');
     },
 
+    confirmSwitchToAvulso() {
+        document.getElementById('modalDigitalWarn').classList.add('hidden');
+        this.setMode('avulso');
+    },
+
     applyAllDigital() {
         const dig = this.produtos.find(p => isDigitalProduct(p.nome));
-        
-        // Aplica a todos os itens
         this.sel.forEach(s => {
-            s.isRemoved = false;
-            s.inAlbum = false;
-            s.extras = {}; 
+            s.isRemoved = false; s.inAlbum = false; s.extras = {}; 
             s.extras[dig.nome] = 1;
         });
-
         document.getElementById('modalDigitalWarn').classList.add('hidden');
-        this.mode = 'avulso'; // Define modo para cálculos corretos
-        this.goToSummary(); // Pula para o final
+        this.mode = 'avulso'; 
+        this.goToSummary();
     },
 
     nav(d) {
         const s = this.sel[this.idx];
         if (d === 1 && this.mode === 'avulso') {
             const hasProd = Object.values(s.extras).reduce((a,b)=>a+b,0) > 0;
-            // Se não tem produto e não está descartada, bloqueia
-            if (!hasProd && !s.isRemoved) {
-                return alert("⚠️ Decida sobre esta foto:\nEscolha um produto ou clique em 'Descartar'.");
-            }
+            if (!hasProd && !s.isRemoved) return alert("⚠️ Decida sobre esta foto:\nEscolha um produto ou clique em 'Descartar'.");
         }
         this.idx = (this.idx + d + this.fotos.length) % this.fotos.length;
         this.load();
@@ -217,7 +213,6 @@ const app = {
         document.getElementById('imgName').innerText = url.split('/').pop();
         document.getElementById('counter').innerText = `${this.idx + 1} / ${this.fotos.length}`;
         this.updateUI();
-        
         const isLast = this.idx === this.fotos.length - 1;
         if(isLast) document.getElementById('btnFinish').classList.remove('hidden');
         else document.getElementById('btnFinish').classList.add('hidden');
@@ -315,7 +310,6 @@ const app = {
                     const safe = p.nome.replace(/\s/g,'');
                     const cred = this.creditos.find(c=>c.nome===p.nome);
                     let badge = cred ? `<span class="digital-badge">${cred.qtd} un. crédito</span>` : '';
-                    // Importante: adicionado onclick para feedback visual
                     html += `<div class="prod-item" id="row_${safe}"><div class="prod-info"><div>${p.nome} ${badge}</div><div>${BRL(p.preco)}</div></div><div class="stepper" id="stp_${safe}"><button onclick="app.chg('${p.nome}', -1)">−</button><span id="val_${safe}">0</span><button onclick="app.chg('${p.nome}', 1)">+</button></div></div>`;
                 });
                 container.innerHTML += html + `</div>`;
@@ -336,18 +330,15 @@ const app = {
             
             if(el && row) {
                 el.innerText = extras[p.nome] || 0;
-                
-                // --- CORREÇÃO DE CLIQUE: Só desabilita se DESCARTADA ---
+                // FIX: Remover lógica complexa de disable e usar apenas para foto descartada
                 if(s.isRemoved) {
                     row.classList.add('disabled');
                 } else {
                     row.classList.remove('disabled');
-                    
-                    // Lógica Digital
+                    // Visibilidade
                     if(isDigitalProduct(p.nome) && hasPrint) row.classList.add('hidden-item');
                     else if(isDigitalProduct(p.nome)) row.classList.remove('hidden-item');
                     
-                    // Lógica Frame
                     if(isFrameProduct(p.nome)) {
                         const dim = getDim(p.nome);
                         const match = Object.keys(extras).some(k => isPrintProduct(k) && getDim(k) === dim && extras[k] > 0);
@@ -416,12 +407,10 @@ const app = {
     switchToAvulso() { document.getElementById('modalUpsell').classList.add('hidden'); this.setMode('avulso'); this.idx=0; this.load(); },
     
     goToSummary() {
-        // --- CÁLCULO FINAL ---
         const avulsoData = this.calcTotalAvulso();
         let albumTotal = 0;
         let albumName = "";
 
-        // 1. Prepara Álbum
         if(this.albumConfig.incluso > 0) {
             const albumCount = this.sel.filter(x=>x.inAlbum).length;
             const extra = Math.max(0, albumCount - this.albumConfig.incluso);
@@ -436,12 +425,8 @@ const app = {
         const subtotal = avulsoData.total + albumTotal - avulsoData.discount;
         const final = subtotal - this.entrada;
 
-        // --- RENDER HTML ---
         let html = '';
-        
-        if(albumName) {
-            html += `<div class="receipt-line"><div><strong>${albumName}</strong></div><div>${BRL(albumTotal)}</div></div>`;
-        }
+        if(albumName) html += `<div class="receipt-line"><div><strong>${albumName}</strong></div><div>${BRL(albumTotal)}</div></div>`;
 
         Object.entries(avulsoData.summary).forEach(([nm, qtd]) => {
             let prd = this.produtos.find(p=>p.nome===nm);
@@ -449,13 +434,8 @@ const app = {
             html += `<div class="receipt-line"><div><strong>${qtd}x ${nm}</strong><div style="font-size:11px;color:#666">${BRL(unit)} un.</div></div><div>${BRL(unit*qtd)}</div></div>`;
         });
 
-        if(avulsoData.discount > 0) {
-            html += `<div class="receipt-line" style="color:var(--brand)"><strong>Desconto (Créditos)</strong><strong>-${BRL(avulsoData.discount)}</strong></div>`;
-        }
-
-        if(this.entrada > 0) {
-            html += `<div class="receipt-line receipt-entry"><span>Entrada Paga:</span> <span>-${BRL(this.entrada)}</span></div>`;
-        }
+        if(avulsoData.discount > 0) html += `<div class="receipt-line" style="color:var(--brand)"><strong>Desconto (Créditos)</strong><strong>-${BRL(avulsoData.discount)}</strong></div>`;
+        if(this.entrada > 0) html += `<div class="receipt-line receipt-entry"><span>Entrada Paga:</span> <span>-${BRL(this.entrada)}</span></div>`;
 
         let labelFinal = final < 0 ? "CRÉDITO SOBRANDO:" : "TOTAL A PAGAR:";
         let valFinal = final < 0 ? BRL(Math.abs(final)) : BRL(final);
@@ -463,12 +443,9 @@ const app = {
 
         html += `<div style="text-align:right; font-size:22px; margin-top:15px; color:${colorFinal}; border-top:2px solid #333; padding-top:10px"><small style="font-size:12px; color:#666; display:block">${labelFinal}</small>${valFinal}</div>`;
 
-        // --- GERA WHATSAPP ---
         let txt = `*📝 PEDIDO STUDIO NBV*\n----------------------------------\n`;
-        
         if(albumName) txt += `📚 *${albumName}*: ${BRL(albumTotal)}\n\n`;
 
-        // Lista Produtos Agrupados
         let report = {};
         this.sel.forEach((s, i) => {
             if(s.isRemoved) return;
@@ -488,13 +465,11 @@ const app = {
 
         txt += `----------------------------------\n`;
         txt += `*💰 FINANCEIRO*\n`;
-        txt += `Total Geral: ${BRL(subtotal + this.entrada)}\n`; // Valor Cheio
+        txt += `Total Geral: ${BRL(subtotal + this.entrada)}\n`; 
         if(avulsoData.discount > 0) txt += `Descontos: -${BRL(avulsoData.discount)}\n`;
         if(this.entrada > 0) txt += `Entrada Paga: -${BRL(this.entrada)}\n`;
-        
         txt += `\n*${final < 0 ? "CRÉDITO: " : "A PAGAR: "} ${BRL(Math.abs(final))}*`;
 
-        // Exibe
         document.getElementById('view-gallery').classList.add('hidden');
         document.getElementById('stickyFooter').classList.add('hidden');
         document.getElementById('modalUpsell').classList.add('hidden');
@@ -509,11 +484,7 @@ const app = {
             if(s.isRemoved) return;
             Object.entries(s.extras).forEach(([nm, qtd]) => {
                 let prd = this.produtos.find(p=>p.nome===nm);
-                if(prd) {
-                    total += prd.preco * qtd;
-                    itemsCount += qtd;
-                    summary[nm] = (summary[nm]||0) + qtd;
-                }
+                if(prd) { total += prd.preco * qtd; itemsCount += qtd; summary[nm] = (summary[nm]||0) + qtd; }
             });
         });
         let discount = 0;

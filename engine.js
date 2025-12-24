@@ -1,4 +1,4 @@
-/* ARQUIVO: engine.js - Lógica Central V17 */
+/* ARQUIVO: engine.js - Lógica Central V18 */
 
 const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const cleanName = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -10,7 +10,7 @@ const isFrameProduct = (n) => cleanName(n).includes('porta') || cleanName(n).inc
 const BASE_HTML = `
 <div id="view-start" class="full-screen-overlay">
     <div style="max-width:400px; margin:40px auto; text-align:center">
-        <h2 style="color:var(--brand); margin-bottom:5px">Bem-vindo (V17)</h2>
+        <h2 style="color:var(--brand); margin-bottom:5px" id="welcomeTitle">Bem-vindo!</h2>
         <p style="color:#57606a; margin-bottom:30px">Como deseja iniciar?</p>
         
         <div id="startInfo" class="card-box hidden" style="background:#fffbe6; border-color:#d4a72c; text-align:left">
@@ -58,7 +58,7 @@ const BASE_HTML = `
             </div>
 
             <div id="controlsAvulso" class="hidden">
-                <button id="btnDiscard" class="btn-toggle-album no" style="margin-bottom:15px" onclick="app.toggleDiscard()">🗑️ DESCARTAR FOTO</button>
+                <button id="btnDiscard" class="btn btn-discard" style="width:100%; margin-bottom:15px" onclick="app.toggleDiscard()">🗑️ DESCARTAR FOTO</button>
                 <div id="dynamicProds"></div>
             </div>
 
@@ -123,6 +123,9 @@ const app = {
         document.body.innerHTML = BASE_HTML;
         if(typeof CLIENT_DATA === 'undefined') return alert("Erro de Dados.");
         
+        // Define o nome no cabeçalho
+        if(CLIENT_DATA.clientName) document.getElementById('welcomeTitle').innerText = `Olá, ${CLIENT_DATA.clientName}!`;
+
         this.fotos = CLIENT_DATA.fotos;
         this.produtos = CLIENT_DATA.produtos;
         this.creditos = CLIENT_DATA.creditos || [];
@@ -130,7 +133,6 @@ const app = {
         this.albumConfig = CLIENT_DATA.albumConfig || { incluso: 0, extra: 0 };
         this.calculoConfig = CLIENT_DATA.calculoConfig || { regras:{}, tabela:[] };
 
-        // Todos começam "limpos"
         this.sel = this.fotos.map(()=>({ inAlbum: false, extras: {}, isRemoved: false }));
         
         if(this.albumConfig.incluso > 0) {
@@ -171,7 +173,7 @@ const app = {
     checkAllDigital() {
         const dig = this.produtos.find(p => isDigitalProduct(p.nome));
         const rev = this.produtos.find(p => p.nome.includes('10x15'));
-        if(!dig) return alert("Produto Digital não configurado.");
+        if(!dig) return alert("Produto 'Arquivo Digital' não cadastrado no painel.");
         document.getElementById('priceDig').innerText = BRL(dig.preco);
         if(rev) document.getElementById('priceRev').innerText = BRL(rev.preco);
         document.getElementById('modalDigitalWarn').classList.remove('hidden');
@@ -197,7 +199,7 @@ const app = {
         const s = this.sel[this.idx];
         if (d === 1 && this.mode === 'avulso') {
             const hasProd = Object.values(s.extras).reduce((a,b)=>a+b,0) > 0;
-            if (!hasProd && !s.isRemoved) return alert("⚠️ Escolha um produto ou descarte a foto.");
+            if (!hasProd && !s.isRemoved) return alert("⚠️ Decida sobre esta foto:\nEscolha um produto ou clique em 'Descartar'.");
         }
         this.idx = (this.idx + d + this.fotos.length) % this.fotos.length;
         this.load();
@@ -214,28 +216,32 @@ const app = {
         else document.getElementById('btnFinish').classList.add('hidden');
     },
 
-    toggleDiscard() {
-        const s = this.sel[this.idx];
-        s.isRemoved = !s.isRemoved;
-        if(s.isRemoved) { s.extras = {}; s.inAlbum = false; }
-        this.updateUI();
-        // Auto avança se descartar
-        if(s.isRemoved && this.idx < this.fotos.length-1) setTimeout(()=>this.nav(1), 300);
-    },
-
     toggleInAlbum(status) {
         this.sel[this.idx].inAlbum = status;
         if(status) this.sel[this.idx].isRemoved = false;
         this.updateUI();
     },
 
-    chg(name, d) {
+    toggleDiscard() {
         const s = this.sel[this.idx];
-        // Destravar descarte se adicionar algo
+        s.isRemoved = !s.isRemoved;
+        if(s.isRemoved) { s.extras = {}; s.inAlbum = false; }
+        this.updateUI();
+        if(s.isRemoved && this.idx < this.fotos.length-1) setTimeout(()=>this.nav(1), 300);
+    },
+
+    // --- NOVA FUNÇÃO DE MUDANÇA USANDO INDEX ---
+    chg(prodIdx, d) {
+        const p = this.produtos[prodIdx]; // Pega produto pelo índice
+        const name = p.nome;
+        const s = this.sel[this.idx];
+        
+        // Se clicar no produto, reseta descarte
         if(d > 0) s.isRemoved = false;
 
         const cur = s.extras[name] || 0;
         let next = Math.max(0, cur + d);
+        
         if(isDigitalProduct(name)) next = Math.min(next, 1);
         if(next === 0) delete s.extras[name];
         else s.extras[name] = next;
@@ -297,9 +303,11 @@ const app = {
 
     renderSidebarAvulso() {
         const container = document.getElementById('dynamicProds');
+        // Renderiza apenas se vazio (Performance)
         if(container.innerHTML === '') { 
              const grps = { 'Revelações': [], 'Porta Retratos': [], 'Outros': [] };
-            this.produtos.forEach(p => {
+            this.produtos.forEach((p, i) => {
+                p.originalIndex = i; // Guarda índice original
                 if(isFrameProduct(p.nome)) grps['Porta Retratos'].push(p);
                 else if(isPrintProduct(p.nome)) grps['Revelações'].push(p);
                 else grps['Outros'].push(p);
@@ -308,10 +316,18 @@ const app = {
                 if(!items.length) return;
                 let html = `<div class="prod-group"><div class="prod-title">${title}</div>`;
                 items.forEach(p => {
-                    const safe = p.nome.replace(/\s/g,'');
+                    const safe = p.originalIndex; // ID baseado no índice numérico (VITAL)
                     const cred = this.creditos.find(c=>c.nome===p.nome);
                     let badge = cred ? `<span class="digital-badge">${cred.qtd} un. crédito</span>` : '';
-                    html += `<div class="prod-item" id="row_${safe}"><div class="prod-info"><div>${p.nome} ${badge}</div><div>${BRL(p.preco)}</div></div><div class="stepper" id="stp_${safe}"><button onclick="app.chg('${p.nome}', -1)">−</button><span id="val_${safe}">0</span><button onclick="app.chg('${p.nome}', 1)">+</button></div></div>`;
+                    // onclick usa o índice numérico agora
+                    html += `<div class="prod-item" id="row_${safe}">
+                        <div class="prod-info"><div>${p.nome} ${badge}</div><div>${BRL(p.preco)}</div></div>
+                        <div class="stepper" id="stp_${safe}">
+                            <button onclick="app.chg(${safe}, -1)">−</button>
+                            <span id="val_${safe}">0</span>
+                            <button onclick="app.chg(${safe}, 1)">+</button>
+                        </div>
+                    </div>`;
                 });
                 container.innerHTML += html + `</div>`;
             };
@@ -324,8 +340,8 @@ const app = {
         const extras = s.extras;
         const hasPrint = Object.keys(extras).some(k => isPrintProduct(k) && extras[k] > 0);
 
-        this.produtos.forEach(p => {
-            const safe = p.nome.replace(/\s/g,'');
+        this.produtos.forEach((p, i) => {
+            const safe = i; // ID numérico
             const el = document.getElementById(`val_${safe}`);
             const row = document.getElementById(`row_${safe}`);
             
@@ -336,7 +352,7 @@ const app = {
                     row.classList.add('disabled');
                 } else {
                     row.classList.remove('disabled');
-                    // Visibilidade
+                    
                     if(isDigitalProduct(p.nome) && hasPrint) row.classList.add('hidden-item');
                     else if(isDigitalProduct(p.nome)) row.classList.remove('hidden-item');
                     
@@ -374,8 +390,10 @@ const app = {
             const rules = this.calculoConfig.regras || {}; 
             const photosPerPage = rules[sz] || 4; 
             const neededPages = Math.ceil(count / photosPerPage);
+            
             const matches = this.calculoConfig.tabela.filter(t => t.size === sz && t.pages >= neededPages);
             matches.sort((a,b) => a.price - b.price);
+            
             if(matches.length > 0) {
                 const best = matches[0];
                 const total = (best.price + this.calculoConfig.custoFixo) * this.calculoConfig.markup;

@@ -1,4 +1,4 @@
-/* ARQUIVO: engine.js - Lógica Central V19 (Bugfix Critical) */
+/* ARQUIVO: engine.js - Lógica Central V20 (Regra < 20 Fotos) */
 
 const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const cleanName = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -58,7 +58,7 @@ const BASE_HTML = `
             </div>
 
             <div id="controlsAvulso" class="hidden">
-                <button id="btnDiscard" class="btn-toggle-album no" style="margin-bottom:15px" onclick="app.toggleDiscard()">🗑️ DESCARTAR FOTO</button>
+                <button id="btnDiscard" class="btn btn-discard" style="width:100%; margin-bottom:15px" onclick="app.toggleDiscard()">🗑️ DESCARTAR FOTO</button>
                 <div id="dynamicProds"></div>
             </div>
 
@@ -123,7 +123,6 @@ const app = {
         document.body.innerHTML = BASE_HTML;
         if(typeof CLIENT_DATA === 'undefined') return alert("Erro de Dados.");
         
-        // Verifica se existe o nome e atualiza
         if(CLIENT_DATA.clientName) {
             document.getElementById('welcomeTitle').innerText = `Olá, ${CLIENT_DATA.clientName}!`;
         }
@@ -137,9 +136,19 @@ const app = {
 
         this.sel = this.fotos.map(()=>({ inAlbum: false, extras: {}, isRemoved: false }));
         
+        // --- REGRA DE OURO (V20): MENOS DE 20 FOTOS ---
+        // Se tiver < 20 fotos, força o modo Avulso e PULA a tela inicial
+        if(this.fotos.length < 20) {
+            console.log("Galeria pequena (<20). Pulando para Avulso.");
+            this.setMode('avulso');
+            return; // Sai da função para não mostrar a tela inicial
+        }
+
+        // Se tiver pacote de álbum incluso, força o modo Álbum
         if(this.albumConfig.incluso > 0) {
             this.setMode('album');
         } else {
+            // Caso contrário, mostra o menu inicial
             this.updateStartInfo();
         }
     },
@@ -175,12 +184,9 @@ const app = {
     checkAllDigital() {
         const dig = this.produtos.find(p => isDigitalProduct(p.nome));
         const rev = this.produtos.find(p => p.nome.includes('10x15'));
-        
         if(!dig) return alert("Produto 'Arquivo Digital' não cadastrado no painel.");
-        
         document.getElementById('priceDig').innerText = BRL(dig.preco);
         if(rev) document.getElementById('priceRev').innerText = BRL(rev.preco);
-        
         document.getElementById('modalDigitalWarn').classList.remove('hidden');
     },
 
@@ -235,13 +241,12 @@ const app = {
         if(s.isRemoved && this.idx < this.fotos.length-1) setTimeout(()=>this.nav(1), 300);
     },
 
-    // Ação de clique do produto
     chg(prodIdx, d) {
         const p = this.produtos[prodIdx];
         const name = p.nome;
         const s = this.sel[this.idx];
         
-        if(d > 0) s.isRemoved = false; // Ressuscita foto
+        if(d > 0) s.isRemoved = false;
 
         const cur = s.extras[name] || 0;
         let next = Math.max(0, cur + d);
@@ -281,8 +286,7 @@ const app = {
             } else {
                 btnDisc.classList.remove('active'); btnDisc.innerText = "🗑️ Descartar Foto";
             }
-            // AQUI ESTAVA O ERRO: Chamava updateSidebarAvulso que não existia mais
-            this.renderSidebarAvulso(); 
+            this.renderSidebarAvulso(); // Atualiza UI da Sidebar
             this.updateStickyAvulso();
         }
     },
@@ -310,7 +314,7 @@ const app = {
         if(container.innerHTML === '') { 
              const grps = { 'Revelações': [], 'Porta Retratos': [], 'Outros': [] };
             this.produtos.forEach((p, i) => {
-                p.originalIndex = i; // Salva o índice para uso no onclick
+                p.originalIndex = i;
                 if(isFrameProduct(p.nome)) grps['Porta Retratos'].push(p);
                 else if(isPrintProduct(p.nome)) grps['Revelações'].push(p);
                 else grps['Outros'].push(p);
@@ -322,7 +326,6 @@ const app = {
                     const safe = p.originalIndex;
                     const cred = this.creditos.find(c=>c.nome===p.nome);
                     let badge = cred ? `<span class="digital-badge">${cred.qtd} un. crédito</span>` : '';
-                    
                     html += `<div class="prod-item" id="row_${safe}">
                         <div class="prod-info"><div>${p.nome} ${badge}</div><div>${BRL(p.preco)}</div></div>
                         <div class="stepper" id="stp_${safe}">
@@ -394,7 +397,6 @@ const app = {
             const neededPages = Math.ceil(count / photosPerPage);
             const matches = this.calculoConfig.tabela.filter(t => t.size === sz && t.pages >= neededPages);
             matches.sort((a,b) => a.price - b.price);
-            
             if(matches.length > 0) {
                 const best = matches[0];
                 const total = (best.price + this.calculoConfig.custoFixo) * this.calculoConfig.markup;

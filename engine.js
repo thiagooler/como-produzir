@@ -1,4 +1,4 @@
-/* ARQUIVO: engine.js - Lógica Central V16 (Correção Final) */
+/* ARQUIVO: engine.js - Lógica Central V17 */
 
 const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const cleanName = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -10,7 +10,7 @@ const isFrameProduct = (n) => cleanName(n).includes('porta') || cleanName(n).inc
 const BASE_HTML = `
 <div id="view-start" class="full-screen-overlay">
     <div style="max-width:400px; margin:40px auto; text-align:center">
-        <h2 style="color:var(--brand); margin-bottom:5px">Bem-vindo!</h2>
+        <h2 style="color:var(--brand); margin-bottom:5px">Bem-vindo (V17)</h2>
         <p style="color:#57606a; margin-bottom:30px">Como deseja iniciar?</p>
         
         <div id="startInfo" class="card-box hidden" style="background:#fffbe6; border-color:#d4a72c; text-align:left">
@@ -89,7 +89,6 @@ const BASE_HTML = `
 <div id="modalAlbumRec" class="modal-overlay hidden">
     <div class="card-box" style="width:100%">
         <h2 style="text-align:center">Sugestões de Álbum</h2>
-        <p style="text-align:center; font-size:13px; color:#666; margin-bottom:20px">Calculamos o melhor custo-benefício:</p>
         <div id="recOptions"></div>
         <button class="btn btn-sec" onclick="document.getElementById('modalAlbumRec').classList.add('hidden')">Voltar</button>
     </div>
@@ -131,6 +130,7 @@ const app = {
         this.albumConfig = CLIENT_DATA.albumConfig || { incluso: 0, extra: 0 };
         this.calculoConfig = CLIENT_DATA.calculoConfig || { regras:{}, tabela:[] };
 
+        // Todos começam "limpos"
         this.sel = this.fotos.map(()=>({ inAlbum: false, extras: {}, isRemoved: false }));
         
         if(this.albumConfig.incluso > 0) {
@@ -168,16 +168,12 @@ const app = {
         this.load();
     },
 
-    // --- FUNÇÕES DIGITAL (TODAS EM ARQUIVO) ---
     checkAllDigital() {
         const dig = this.produtos.find(p => isDigitalProduct(p.nome));
         const rev = this.produtos.find(p => p.nome.includes('10x15'));
-        
-        if(!dig) return alert("Produto 'Arquivo Digital' não cadastrado no painel.");
-        
+        if(!dig) return alert("Produto Digital não configurado.");
         document.getElementById('priceDig').innerText = BRL(dig.preco);
         if(rev) document.getElementById('priceRev').innerText = BRL(rev.preco);
-        
         document.getElementById('modalDigitalWarn').classList.remove('hidden');
     },
 
@@ -201,7 +197,7 @@ const app = {
         const s = this.sel[this.idx];
         if (d === 1 && this.mode === 'avulso') {
             const hasProd = Object.values(s.extras).reduce((a,b)=>a+b,0) > 0;
-            if (!hasProd && !s.isRemoved) return alert("⚠️ Decida sobre esta foto:\nEscolha um produto ou clique em 'Descartar'.");
+            if (!hasProd && !s.isRemoved) return alert("⚠️ Escolha um produto ou descarte a foto.");
         }
         this.idx = (this.idx + d + this.fotos.length) % this.fotos.length;
         this.load();
@@ -218,27 +214,32 @@ const app = {
         else document.getElementById('btnFinish').classList.add('hidden');
     },
 
+    toggleDiscard() {
+        const s = this.sel[this.idx];
+        s.isRemoved = !s.isRemoved;
+        if(s.isRemoved) { s.extras = {}; s.inAlbum = false; }
+        this.updateUI();
+        // Auto avança se descartar
+        if(s.isRemoved && this.idx < this.fotos.length-1) setTimeout(()=>this.nav(1), 300);
+    },
+
     toggleInAlbum(status) {
         this.sel[this.idx].inAlbum = status;
         if(status) this.sel[this.idx].isRemoved = false;
         this.updateUI();
     },
 
-    toggleDiscard() {
-        const s = this.sel[this.idx];
-        s.isRemoved = !s.isRemoved;
-        if(s.isRemoved) { s.extras = {}; s.inAlbum = false; }
-        this.updateUI();
-    },
-
     chg(name, d) {
         const s = this.sel[this.idx];
+        // Destravar descarte se adicionar algo
         if(d > 0) s.isRemoved = false;
+
         const cur = s.extras[name] || 0;
         let next = Math.max(0, cur + d);
         if(isDigitalProduct(name)) next = Math.min(next, 1);
         if(next === 0) delete s.extras[name];
         else s.extras[name] = next;
+        
         this.updateUI();
     },
 
@@ -330,7 +331,7 @@ const app = {
             
             if(el && row) {
                 el.innerText = extras[p.nome] || 0;
-                // FIX: Remover lógica complexa de disable e usar apenas para foto descartada
+                
                 if(s.isRemoved) {
                     row.classList.add('disabled');
                 } else {
@@ -373,10 +374,8 @@ const app = {
             const rules = this.calculoConfig.regras || {}; 
             const photosPerPage = rules[sz] || 4; 
             const neededPages = Math.ceil(count / photosPerPage);
-            
             const matches = this.calculoConfig.tabela.filter(t => t.size === sz && t.pages >= neededPages);
             matches.sort((a,b) => a.price - b.price);
-            
             if(matches.length > 0) {
                 const best = matches[0];
                 const total = (best.price + this.calculoConfig.custoFixo) * this.calculoConfig.markup;

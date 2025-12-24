@@ -1,4 +1,4 @@
-/* ARQUIVO: style.css (V18 - Final) */
+/* ARQUIVO: style.css (V21 - Fix Footer Sobreposto) */
 :root {
   --bg: #f6f8fa; --card: #ffffff; --text: #24292f; --border: #d0d7de;
   --brand: #2da44e; --brand-hover: #2c974b; --accent: #0969da;
@@ -10,10 +10,12 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 /* LAYOUT */
 .main-container { flex: 1; overflow: hidden; position: relative; }
 .gallery-grid { display: grid; grid-template-columns: 1fr 360px; height: 100%; }
+
 @media(max-width: 768px) { 
   .gallery-grid { display: flex; flex-direction: column; overflow-y: auto; } 
   .photo-area { height: 50vh !important; flex-shrink: 0; }
-  .sidebar { height: auto !important; overflow: visible !important; padding-bottom: 80px; }
+  /* CORREÇÃO MOBILE: Espaço extra no fundo para o rodapé não cobrir nada */
+  .sidebar { height: auto !important; overflow: visible !important; padding-bottom: 120px !important; }
 }
 
 /* FOTO */
@@ -24,30 +26,38 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 .nav-btn:hover { background: #fff; transform: translateY(-50%) scale(1.1); }
 .nav-left { left: 15px; } .nav-right { right: 15px; }
 
-/* STATUS VISUAL */
+/* OVERLAYS NA FOTO */
 .status-overlay { position: absolute; font-size: 18px; font-weight: bold; padding: 10px 20px; border-radius: 8px; transform: rotate(-5deg); display: none; background: rgba(255,255,255,0.9); border: 2px solid; pointer-events: none; z-index: 5; }
 .status-overlay.in-album { color: var(--brand); border-color: var(--brand); display: block; }
 .status-overlay.out-album { color: var(--danger); border-color: var(--danger); display: block; transform: rotate(5deg); }
 
-/* SIDEBAR */
-.sidebar { background: var(--card); border-left: 1px solid var(--border); padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; z-index: 20; position: relative; }
+/* SIDEBAR & PRODUTOS */
+/* CORREÇÃO DESKTOP: Espaço extra no fundo da rolagem (120px) */
+.sidebar { 
+    background: var(--card); 
+    border-left: 1px solid var(--border); 
+    padding: 20px; 
+    padding-bottom: 120px; /* <--- AQUI ESTÁ A CORREÇÃO PRINCIPAL */
+    overflow-y: auto; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 15px; 
+    z-index: 20; 
+    position: relative; 
+}
+
 .prod-group { margin-bottom: 15px; }
 .prod-title { font-size: 11px; font-weight: bold; text-transform: uppercase; color: #57606a; margin-bottom: 8px; }
 
-/* ITEM PRODUTO - LOGICA DE CLIQUE */
 .prod-item { 
     display: flex; justify-content: space-between; align-items: center; 
     padding: 12px; border: 1px solid var(--border); border-radius: 8px; 
     margin-bottom: 8px; background: #fff; transition: .2s; 
-    position: relative; 
+    cursor: pointer; position: relative;
 }
 .prod-item.highlight { border-color: var(--accent); background: #f0f6fc; }
 .prod-item.hidden-item { display: none !important; }
-
-/* Item desabilitado (foto descartada), mas permite clicar no stepper */
-.prod-item.disabled { opacity: 0.5; background: #f4f4f4; } 
-.prod-item.disabled .prod-info { opacity: 0.5; } /* Texto apagado */
-.prod-item.disabled .stepper { opacity: 1; pointer-events: auto; background: #fff; } /* Botão aceso */
+.prod-item.disabled { opacity: 0.5; filter: grayscale(100%); background: #f9f9f9; }
 
 .stepper { display: flex; align-items: center; background: #f6f8fa; border-radius: 6px; border: 1px solid var(--border); overflow: hidden; }
 .stepper button { width: 35px; height: 35px; border: none; background: #fff; font-size: 18px; cursor: pointer; color: var(--text); display: flex; align-items: center; justify-content: center; transition: .1s; }
@@ -57,7 +67,7 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ro
 .stepper.active button { color: var(--brand); background: #f0fff4; }
 
 /* MODALS */
-.full-screen-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 100; overflow-y: auto; padding: 20px; }
+.full-screen-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 100; overflow-y: auto; padding: 20px; padding-bottom: 100px; }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
 .card-box { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 0 auto 15px; max-width: 500px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: relative; width: 100%; }
 .hidden { display: none !important; } 

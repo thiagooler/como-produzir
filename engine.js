@@ -1,4 +1,4 @@
-/* ARQUIVO: engine.js - Lógica Central V20 (Regra < 20 Fotos) */
+/* ARQUIVO: engine.js - Lógica Central V23 (New Design) */
 
 const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const cleanName = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -8,31 +8,63 @@ const isPrintProduct = (n) => cleanName(n).includes('foto') || cleanName(n).incl
 const isFrameProduct = (n) => cleanName(n).includes('porta') || cleanName(n).includes('moldura');
 
 const BASE_HTML = `
-<div id="view-start" class="full-screen-overlay">
-    <div style="max-width:400px; margin:40px auto; text-align:center">
-        <h2 style="color:var(--brand); margin-bottom:5px" id="welcomeTitle">Bem-vindo!</h2>
-        <p style="color:#57606a; margin-bottom:30px">Como deseja iniciar?</p>
-        
-        <div id="startInfo" class="card-box hidden" style="background:#fffbe6; border-color:#d4a72c; text-align:left">
-            <h4 style="margin:0 0 10px 0; color:#9a6700">🎁 Seus Créditos:</h4>
-            <ul id="startList" style="margin:0; padding-left:20px; font-size:13px; color:#333"></ul>
+<div id="view-start" class="full-screen-overlay" style="padding:0; background:#f4f4f4">
+    <header class="start-header">
+        <h1 class="start-title" id="greeting">Olá, Cliente</h1>
+        <p class="start-subtitle">Selecione como você deseja produzir seu pedido</p>
+    </header>
+
+    <div class="start-container">
+        <div id="startInfo" class="start-info-box hidden">
+            <h4>🎁 Resumo do seu Pacote / Entrada:</h4>
+            <ul id="startList" class="start-info-list"></ul>
         </div>
 
-        <div class="card-box start-card album" onclick="app.setMode('album')">
-            <strong style="font-size:16px">📚 Montar Fotolivro</strong><br>
-            <span style="font-size:13px; color:#57606a">Selecionar fotos para o álbum.</span>
-        </div>
+        <div class="options-grid">
+            <div class="start-card">
+                <div class="card-image-container">
+                    <img src="https://www.phooto.com.br/wp-content/uploads/2018/11/capadura21x28-semselo.png" alt="Fotolivro" class="img-contain">
+                </div>
+                <div class="card-content">
+                    <div>
+                        <div class="card-title">Fotolivro</div>
+                        <p class="card-desc">Eternize seus melhores momentos em um álbum de capa dura e acabamento premium.</p>
+                    </div>
+                    <button class="btn-start" onclick="app.setMode('album')">Selecionar</button>
+                </div>
+            </div>
 
-        <div class="card-box start-card avulso" onclick="app.setMode('avulso')">
-            <strong style="font-size:16px">📸 Revelações Avulsas</strong><br>
-            <span style="font-size:13px; color:#57606a">Fotos, quadros ou seleção individual.</span>
-        </div>
+            <div class="start-card">
+                <div class="card-image-container">
+                    <img src="https://www.dreambooks.com.br/images/blog_brasil/por_que_revelar_fotos_ainda_eh_tao_importante/conteudo_open%20graph_revelarfotos.jpg" alt="Revelação" class="img-cover">
+                </div>
+                <div class="card-content">
+                    <div>
+                        <div class="card-title">Revelação de Fotos</div>
+                        <p class="card-desc">Imprima suas memórias em papel fotográfico de alta qualidade. Vários tamanhos.</p>
+                    </div>
+                    <button class="btn-start" onclick="app.setMode('avulso')">Selecionar</button>
+                </div>
+            </div>
 
-        <div class="card-box start-card digital" onclick="app.checkAllDigital()">
-            <strong style="font-size:16px">💾 Todas em Arquivo Digital</strong><br>
-            <span style="font-size:13px; color:#57606a">Comprar todas as fotos em arquivo.</span>
+            <div class="start-card">
+                <div class="card-image-container">
+                    <img src="https://img.odcdn.com.br/wp-content/uploads/2024/09/como-recuperar-arquivos-no-windows-1920x1080.jpg" alt="Digital" class="img-cover">
+                </div>
+                <div class="card-content">
+                    <div>
+                        <div class="card-title">Fotos em Arquivo</div>
+                        <p class="card-desc">Receba todas as fotos do evento em alta resolução via download ou link na nuvem.</p>
+                    </div>
+                    <button class="btn-start" onclick="app.checkAllDigital()">Selecionar</button>
+                </div>
+            </div>
         </div>
     </div>
+
+    <footer class="start-footer">
+        &copy; 2025 Studio NBV - Todos os direitos reservados.
+    </footer>
 </div>
 
 <div id="view-gallery" class="main-container hidden">
@@ -58,7 +90,7 @@ const BASE_HTML = `
             </div>
 
             <div id="controlsAvulso" class="hidden">
-                <button id="btnDiscard" class="btn btn-discard" style="width:100%; margin-bottom:15px" onclick="app.toggleDiscard()">🗑️ DESCARTAR FOTO</button>
+                <button id="btnDiscard" class="btn-toggle-album no" style="margin-bottom:15px" onclick="app.toggleDiscard()">🗑️ DESCARTAR FOTO</button>
                 <div id="dynamicProds"></div>
             </div>
 
@@ -103,10 +135,10 @@ const BASE_HTML = `
     </div>
 </div>
 
-<div id="view-summary" class="full-screen-overlay hidden">
+<div id="view-summary" class="full-screen-overlay hidden" style="background:var(--bg)">
     <div style="max-width:500px; margin:20px auto">
         <h2 style="text-align:center">Resumo Final</h2>
-        <div class="card-box" id="summaryContent"></div>
+        <div class="card-box" id="summaryContent" style="background:#fff"></div>
         <a id="btnWhats" target="_blank" class="btn btn-whats">Enviar no WhatsApp</a>
         <button class="btn btn-sec" onclick="location.reload()">Voltar</button>
     </div>
@@ -124,7 +156,7 @@ const app = {
         if(typeof CLIENT_DATA === 'undefined') return alert("Erro de Dados.");
         
         if(CLIENT_DATA.clientName) {
-            document.getElementById('welcomeTitle').innerText = `Olá, ${CLIENT_DATA.clientName}!`;
+            document.getElementById('greeting').innerText = `Olá, ${CLIENT_DATA.clientName}`;
         }
 
         this.fotos = CLIENT_DATA.fotos;
@@ -136,19 +168,14 @@ const app = {
 
         this.sel = this.fotos.map(()=>({ inAlbum: false, extras: {}, isRemoved: false }));
         
-        // --- REGRA DE OURO (V20): MENOS DE 20 FOTOS ---
-        // Se tiver < 20 fotos, força o modo Avulso e PULA a tela inicial
         if(this.fotos.length < 20) {
-            console.log("Galeria pequena (<20). Pulando para Avulso.");
             this.setMode('avulso');
-            return; // Sai da função para não mostrar a tela inicial
+            return;
         }
 
-        // Se tiver pacote de álbum incluso, força o modo Álbum
         if(this.albumConfig.incluso > 0) {
             this.setMode('album');
         } else {
-            // Caso contrário, mostra o menu inicial
             this.updateStartInfo();
         }
     },
@@ -286,7 +313,7 @@ const app = {
             } else {
                 btnDisc.classList.remove('active'); btnDisc.innerText = "🗑️ Descartar Foto";
             }
-            this.renderSidebarAvulso(); // Atualiza UI da Sidebar
+            this.renderSidebarAvulso(); 
             this.updateStickyAvulso();
         }
     },

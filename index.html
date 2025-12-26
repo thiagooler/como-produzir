@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Studio NBV • Master V19</title>
+    <title>Painel Studio NBV • Master V20</title>
     <script src="database.js"></script>
     <style>
         :root { --brand: #2da44e; --bg: #f6f8fa; --card: #ffffff; --border: #d0d7de; --text: #24292f; --accent: #0969da; --danger: #cf222e; }
@@ -29,7 +29,7 @@
 </head>
 <body>
 
-<h1>🚀 Studio NBV • Master V19 (Link Seguro)</h1>
+<h1>🚀 Studio NBV • Master V20 (Dados Completos)</h1>
 
 <div class="card">
     <div class="card-header" onclick="toggle('ghConfig', this)">🔐 GitHub ▼</div>
@@ -50,11 +50,12 @@
         <button class="btn-mini" onclick="addProductRow('','')">+ Add Produto</button>
 
         <h3>2. Tabela Fotolivro</h3>
+        <p style="font-size:11px;color:#666">Formato: Tamanho, Páginas, Preço Normal, Preço com Maleta</p>
         <div class="row">
-            <div class="col"><label>Markup</label><input type="number" id="calcMarkup" step="0.1"></div>
-            <div class="col"><label>Custo Fixo</label><input type="number" id="calcCusto"></div>
+            <div class="col"><label>Markup (Multiplicador)</label><input type="number" id="calcMarkup" step="0.1" value="1"></div>
+            <div class="col"><label>Custo Fixo (Soma)</label><input type="number" id="calcCusto" value="0"></div>
         </div>
-        <textarea id="txtTable" rows="8" placeholder="30x40, 20, 592, 754..."></textarea>
+        <textarea id="txtTable" rows="15" placeholder="30x40, 20, 592, 754..."></textarea>
 
         <h3>3. Padrão Global</h3>
         <div class="row">
@@ -70,7 +71,6 @@
     <div id="generator" class="card-body show">
         <label>Nome do Cliente (Ex: Maria 15 Anos)</label>
         <input type="text" id="clientName" placeholder="Maria 15 Anos">
-        <p style="font-size:11px; color:#666; margin-top:2px">⚠️ Será adicionado um código único ao link para evitar duplicidade.</p>
         
         <label>Fotos</label>
         <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="handleFiles(this.files)">
@@ -167,8 +167,6 @@ async function deploy(){
     
     if(!rawName || !selectedFiles.length) return alert("Falta nome ou fotos!");
     
-    // --- GERAÇÃO DE SUFIXO ÚNICO ---
-    // Cria um código aleatório de 4 caracteres (ex: a1b2)
     let uniqueId = Math.random().toString(36).substring(2, 6);
     let urlName = rawName.toLowerCase().replace(/[^a-z0-9-]/g,'-') + '-' + uniqueId;
     
@@ -182,7 +180,6 @@ async function deploy(){
             let f=selectedFiles[i]; fill.style.width=((i/selectedFiles.length)*90)+'%';
             let reader=new FileReader(); let b64=await new Promise(r=>{reader.onload=()=>r(reader.result.split(',')[1]);reader.readAsDataURL(f)});
             let path=`clientes/${urlName}/${f.name}`;
-            // Não precisa checar SHA pois a pasta é garantidamente nova
             await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${path}`,{method:'PUT',headers:{Authorization:`token ${token}`},body:JSON.stringify({message:`Img`,content:b64,branch:'main'})});
             fileNames.push(f.name);
         }
@@ -190,6 +187,7 @@ async function deploy(){
         let configIncluso = document.getElementById('dbIncluso').value;
         let configExtra = document.getElementById('dbExtra').value;
 
+        // IMPORTANTE: Aqui que estava o erro. Adicionamos calculoConfig!
         let htmlLeve = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -206,7 +204,8 @@ async function deploy(){
             produtos: ${JSON.stringify(DB_CONFIG.produtos)},
             creditos: ${JSON.stringify(clientGifts)},
             entrada: ${document.getElementById('valEntrada').value},
-            albumConfig: { incluso: ${configIncluso}, extra: ${configExtra} }
+            albumConfig: { incluso: ${configIncluso}, extra: ${configExtra} },
+            calculoConfig: ${JSON.stringify(DB_CONFIG.calculo)} 
         };
     <\/script>
     <script src="../../engine.js"><\/script>
@@ -214,7 +213,7 @@ async function deploy(){
 </html>`;
 
         let hPath=`clientes/${urlName}/index.html`;
-        await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${hPath}`,{method:'PUT',headers:{Authorization:`token ${token}`},body:JSON.stringify({message:`HTML V19`,content:btoa(unescape(encodeURIComponent(htmlLeve))),branch:'main'})});
+        await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${hPath}`,{method:'PUT',headers:{Authorization:`token ${token}`},body:JSON.stringify({message:`HTML V20`,content:btoa(unescape(encodeURIComponent(htmlLeve))),branch:'main'})});
 
         fill.style.width='100%';
         let link=`https://${user}.github.io/${repo}/clientes/${urlName}/`;

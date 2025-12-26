@@ -1,4 +1,4 @@
-/* ARQUIVO: engine.js - Lógica Central V29 (Retrocompatibilidade) */
+/* ARQUIVO: engine.js - Lógica Central V31 (Botão no Final) */
 
 const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const cleanName = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -75,15 +75,16 @@ const BASE_HTML = `
                 <button id="btnDiscard" class="btn-toggle-album no" style="margin-bottom:15px" onclick="app.toggleDiscard()">🗑️ DESCARTAR FOTO</button>
                 <div id="dynamicProds"></div>
             </div>
-
-            <button id="btnFinish" class="btn hidden" style="margin-top:auto" onclick="app.finishStep()">✅ Concluir Etapa</button>
         </div>
     </div>
 </div>
 
 <div id="stickyFooter" class="sticky-footer hidden">
-    <div style="font-size:12px; color:#57606a" id="footerText">Total</div>
-    <div class="total-price" id="stickTotal">R$ 0,00</div>
+    <div class="footer-info">
+        <div style="font-size:12px; color:#57606a" id="footerText">Total</div>
+        <div class="total-price" id="stickTotal">R$ 0,00</div>
+    </div>
+    <button id="btnFooterFinish" class="btn-footer-finish hidden" onclick="app.finishStep()">Concluir ✅</button>
 </div>
 
 <div id="modalDigitalWarn" class="modal-overlay hidden">
@@ -130,45 +131,30 @@ const app = {
         document.body.innerHTML = BASE_HTML;
         if(typeof CLIENT_DATA === 'undefined') return alert("Erro de Dados.");
         
-        // --- CORREÇÃO RETROCOMPATIBILIDADE (V29) ---
-        // Se a galeria for antiga e não tiver calculoConfig, busca no database.js
         if (!CLIENT_DATA.calculoConfig) {
-            console.log("Galeria antiga detectada. Buscando dados globais...");
             const script = document.createElement('script');
-            script.src = '../../database.js'; // Caminho relativo para a raiz
+            script.src = '../../database.js'; 
             script.onload = () => {
-                if(typeof DB_CONFIG !== 'undefined') {
-                    // Injeta a tabela global na galeria antiga
-                    CLIENT_DATA.calculoConfig = DB_CONFIG.calculo;
-                    app.startApp(); // Inicia após carregar
-                } else {
-                    alert("Erro ao carregar tabela de preços.");
-                }
+                if(typeof DB_CONFIG !== 'undefined') { CLIENT_DATA.calculoConfig = DB_CONFIG.calculo; app.startApp(); }
+                else alert("Erro tabela.");
             };
-            script.onerror = () => app.startApp(); // Tenta iniciar mesmo sem tabela (vai dar fallback no orçamento)
+            script.onerror = () => app.startApp();
             document.head.appendChild(script);
         } else {
-            app.startApp(); // Galeria nova, já tem tudo
+            app.startApp();
         }
     },
 
     startApp() {
         if(CLIENT_DATA.clientName) document.getElementById('greeting').innerText = `Olá, ${CLIENT_DATA.clientName}`;
-
         this.fotos = CLIENT_DATA.fotos;
         this.produtos = CLIENT_DATA.produtos;
         this.creditos = CLIENT_DATA.creditos || [];
         this.entrada = CLIENT_DATA.entrada || 0;
         this.albumConfig = CLIENT_DATA.albumConfig || { incluso: 0, extra: 0 };
-        // Garante que calculoConfig existe (mesmo que vazio)
         this.calculoConfig = CLIENT_DATA.calculoConfig || { regras:{}, tabela:[] };
-
         this.sel = this.fotos.map(()=>({ inAlbum: false, extras: {}, isRemoved: false }));
-        
-        if(this.fotos.length < 20) {
-            this.setMode('avulso');
-            return;
-        }
+        if(this.fotos.length < 20) { this.setMode('avulso'); return; }
         if(this.albumConfig.incluso > 0) this.setMode('album'); else this.updateStartInfo();
     },
 
@@ -200,81 +186,42 @@ const app = {
         this.load();
     },
 
+    // --- RECOMENDAÇÃO ÁLBUM V28 ---
     showRecommendationModal(count) {
-        const modal = document.getElementById('modalAlbumRec');
-        const container = document.getElementById('recOptions');
-        document.getElementById('recCount').innerText = count;
-        container.innerHTML = '';
-        
-        const opts = [];
-        const sizes = ['15x20', '20x30', '30x40']; 
-        
+        const modal = document.getElementById('modalAlbumRec'); const container = document.getElementById('recOptions');
+        document.getElementById('recCount').innerText = count; container.innerHTML = '';
+        const opts = []; const sizes = ['15x20', '20x30', '30x40']; 
         if(this.calculoConfig.tabela && this.calculoConfig.tabela.length > 0) {
             sizes.forEach(sz => {
-                const photosPerPage = ALBUM_RULES[sz];
-                const neededPages = Math.ceil(count / photosPerPage);
-                
+                const photosPerPage = ALBUM_RULES[sz]; const neededPages = Math.ceil(count / photosPerPage);
                 const matchingTables = this.calculoConfig.tabela.filter(t => String(t.size).includes(sz));
                 matchingTables.sort((a,b) => parseInt(a.pages) - parseInt(b.pages));
-                
-                // Arredondamento inteligente: Pega o próximo disponível
                 let validAlbum = matchingTables.find(t => parseInt(t.pages) >= neededPages);
-                // Se estourou o limite, pega o maior
                 if(!validAlbum && matchingTables.length > 0) validAlbum = matchingTables[matchingTables.length - 1];
-
                 if(validAlbum) {
-                    const mk = this.calculoConfig.markup || 1;
-                    const cf = this.calculoConfig.custoFixo || 0;
-                    const priceNormal = (validAlbum.price + cf) * mk;
-                    const priceBox = (validAlbum.priceBox + cf) * mk;
-                    
-                    opts.push({ 
-                        name: `Fotolivro ${sz}`, 
-                        desc: `${validAlbum.pages} páginas (ideal para ${count} fotos)`, 
-                        price: priceNormal,
-                        priceBox: priceBox
-                    });
+                    const mk = this.calculoConfig.markup || 1; const cf = this.calculoConfig.custoFixo || 0;
+                    const priceNormal = (validAlbum.price + cf) * mk; const priceBox = (validAlbum.priceBox + cf) * mk;
+                    opts.push({ name: `Fotolivro ${sz}`, desc: `${validAlbum.pages} páginas (ideal para ${count} fotos)`, price: priceNormal, priceBox: priceBox });
                 }
             });
         }
-
-        if(opts.length === 0) {
-            container.innerHTML = `<p style="text-align:center">Nenhuma opção automática encontrada para esta quantidade. Fale conosco no WhatsApp.</p>`;
-        } else {
+        if(opts.length === 0) { container.innerHTML = `<p style="text-align:center">Nenhuma opção automática. Fale no WhatsApp.</p>`; } 
+        else {
             opts.forEach((o, i) => {
-                if(!app.tempRecOptions) app.tempRecOptions = [];
-                app.tempRecOptions[i] = o;
-                
-                container.innerHTML += `
-                <div class="start-card" style="margin-bottom:15px; padding:15px; border-left:4px solid var(--brand); cursor:default">
-                    <div style="margin-bottom:10px">
-                        <div style="font-weight:bold; font-size:18px; color:#333">${o.name}</div>
-                        <div style="font-size:12px; color:#666">${o.desc}</div>
-                    </div>
-                    <div style="display:flex; gap:10px">
-                        <button class="btn-start" style="font-size:13px; background:#fff; color:var(--brand); border:1px solid var(--brand)" onclick="app.selectRec(${i}, false)">
-                            Sem Maleta<br><strong>${BRL(o.price)}</strong>
-                        </button>
-                        <button class="btn-start" style="font-size:13px" onclick="app.selectRec(${i}, true)">
-                            Com Maleta<br><strong>${BRL(o.priceBox)}</strong>
-                        </button>
-                    </div>
-                </div>`;
+                if(!app.tempRecOptions) app.tempRecOptions = []; app.tempRecOptions[i] = o;
+                container.innerHTML += `<div class="start-card" style="margin-bottom:15px; padding:15px; border-left:4px solid var(--brand); cursor:default"><div style="margin-bottom:10px"><div style="font-weight:bold; font-size:18px; color:#333">${o.name}</div><div style="font-size:12px; color:#666">${o.desc}</div></div><div style="display:flex; gap:10px"><button class="btn-start" style="font-size:13px; background:#fff; color:var(--brand); border:1px solid var(--brand)" onclick="app.selectRec(${i}, false)">Sem Maleta<br><strong>${BRL(o.price)}</strong></button><button class="btn-start" style="font-size:13px" onclick="app.selectRec(${i}, true)">Com Maleta<br><strong>${BRL(o.priceBox)}</strong></button></div></div>`;
             });
         }
         modal.classList.remove('hidden');
     },
-
     selectRec(idx, withBox) {
         const opt = app.tempRecOptions[idx];
-        this.selectedAlbum = {
-            name: `${opt.name} (${withBox ? 'Com Maleta' : 'Sem Maleta'})`,
-            price: withBox ? opt.priceBox : opt.price
-        };
+        this.selectedAlbum = { name: `${opt.name} (${withBox ? 'Com Maleta' : 'Sem Maleta'})`, price: withBox ? opt.priceBox : opt.price };
         document.getElementById('modalAlbumRec').classList.add('hidden');
         this.showUpsellModal();
     },
 
+    // --- NAV E LOAD (AQUI ESTÁ A LÓGICA DO BOTÃO) ---
     nav(d) {
         const s = this.sel[this.idx];
         if (d === 1 && this.mode === 'avulso') {
@@ -284,16 +231,21 @@ const app = {
         this.idx = (this.idx + d + this.fotos.length) % this.fotos.length;
         this.load();
     },
+    
     load() {
         const url = this.fotos[this.idx];
         document.getElementById('imgMain').src = url;
         document.getElementById('imgName').innerText = url.split('/').pop();
         document.getElementById('counter').innerText = `${this.idx + 1} / ${this.fotos.length}`;
         this.updateUI();
+        
+        // --- LÓGICA DO BOTÃO VISÍVEL SÓ NA ÚLTIMA FOTO ---
         const isLast = this.idx === this.fotos.length - 1;
-        if(isLast) document.getElementById('btnFinish').classList.remove('hidden');
-        else document.getElementById('btnFinish').classList.add('hidden');
+        const btn = document.getElementById('btnFooterFinish');
+        if (isLast) btn.classList.remove('hidden');
+        else btn.classList.add('hidden');
     },
+
     toggleInAlbum(status) {
         this.sel[this.idx].inAlbum = status;
         if(status) this.sel[this.idx].isRemoved = false;

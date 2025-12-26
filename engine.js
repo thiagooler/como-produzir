@@ -1,4 +1,4 @@
-/* ARQUIVO: engine.js - Lógica Central V28 (Cálculo Completo) */
+/* ARQUIVO: engine.js - Lógica Central V29 (Retrocompatibilidade) */
 
 const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const cleanName = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -7,12 +7,7 @@ const isDigitalProduct = (n) => cleanName(n).includes('arquivo') || cleanName(n)
 const isPrintProduct = (n) => cleanName(n).includes('foto') || cleanName(n).includes('revel');
 const isFrameProduct = (n) => cleanName(n).includes('porta') || cleanName(n).includes('moldura');
 
-// REGRAS FIXAS (FOTOS POR PÁGINA)
-const ALBUM_RULES = {
-    '15x20': 2,
-    '20x30': 4,
-    '30x40': 5
-};
+const ALBUM_RULES = { '15x20': 2, '20x30': 4, '30x40': 5 };
 
 const BASE_HTML = `
 <div id="view-start" class="full-screen-overlay" style="padding:0; background:#f4f4f4">
@@ -134,6 +129,30 @@ const app = {
     init() {
         document.body.innerHTML = BASE_HTML;
         if(typeof CLIENT_DATA === 'undefined') return alert("Erro de Dados.");
+        
+        // --- CORREÇÃO RETROCOMPATIBILIDADE (V29) ---
+        // Se a galeria for antiga e não tiver calculoConfig, busca no database.js
+        if (!CLIENT_DATA.calculoConfig) {
+            console.log("Galeria antiga detectada. Buscando dados globais...");
+            const script = document.createElement('script');
+            script.src = '../../database.js'; // Caminho relativo para a raiz
+            script.onload = () => {
+                if(typeof DB_CONFIG !== 'undefined') {
+                    // Injeta a tabela global na galeria antiga
+                    CLIENT_DATA.calculoConfig = DB_CONFIG.calculo;
+                    app.startApp(); // Inicia após carregar
+                } else {
+                    alert("Erro ao carregar tabela de preços.");
+                }
+            };
+            script.onerror = () => app.startApp(); // Tenta iniciar mesmo sem tabela (vai dar fallback no orçamento)
+            document.head.appendChild(script);
+        } else {
+            app.startApp(); // Galeria nova, já tem tudo
+        }
+    },
+
+    startApp() {
         if(CLIENT_DATA.clientName) document.getElementById('greeting').innerText = `Olá, ${CLIENT_DATA.clientName}`;
 
         this.fotos = CLIENT_DATA.fotos;
@@ -141,6 +160,7 @@ const app = {
         this.creditos = CLIENT_DATA.creditos || [];
         this.entrada = CLIENT_DATA.entrada || 0;
         this.albumConfig = CLIENT_DATA.albumConfig || { incluso: 0, extra: 0 };
+        // Garante que calculoConfig existe (mesmo que vazio)
         this.calculoConfig = CLIENT_DATA.calculoConfig || { regras:{}, tabela:[] };
 
         this.sel = this.fotos.map(()=>({ inAlbum: false, extras: {}, isRemoved: false }));
@@ -180,7 +200,6 @@ const app = {
         this.load();
     },
 
-    // --- ALGORITMO CORRIGIDO COM MALETA ---
     showRecommendationModal(count) {
         const modal = document.getElementById('modalAlbumRec');
         const container = document.getElementById('recOptions');
@@ -192,27 +211,22 @@ const app = {
         
         if(this.calculoConfig.tabela && this.calculoConfig.tabela.length > 0) {
             sizes.forEach(sz => {
-                // 1. Calcula páginas necessárias
                 const photosPerPage = ALBUM_RULES[sz];
                 const neededPages = Math.ceil(count / photosPerPage);
                 
-                // 2. Filtra tabela (contém o tamanho) e ordena por páginas
-                // IMPORTANTE: Se neededPages for 4 e tabela começa em 20, ele deve pegar o de 20.
                 const matchingTables = this.calculoConfig.tabela.filter(t => String(t.size).includes(sz));
                 matchingTables.sort((a,b) => parseInt(a.pages) - parseInt(b.pages));
                 
-                // Pega o primeiro que satisfaz a condição >= neededPages
+                // Arredondamento inteligente: Pega o próximo disponível
                 let validAlbum = matchingTables.find(t => parseInt(t.pages) >= neededPages);
-                
-                // Se não achou (ex: precisa de 110 pag e o max é 100), pega o maior disponível
+                // Se estourou o limite, pega o maior
                 if(!validAlbum && matchingTables.length > 0) validAlbum = matchingTables[matchingTables.length - 1];
 
                 if(validAlbum) {
                     const mk = this.calculoConfig.markup || 1;
                     const cf = this.calculoConfig.custoFixo || 0;
-                    
                     const priceNormal = (validAlbum.price + cf) * mk;
-                    const priceBox = (validAlbum.priceBox + cf) * mk; // Pega coluna 4
+                    const priceBox = (validAlbum.priceBox + cf) * mk;
                     
                     opts.push({ 
                         name: `Fotolivro ${sz}`, 
@@ -225,13 +239,12 @@ const app = {
         }
 
         if(opts.length === 0) {
-            container.innerHTML = `<p style="text-align:center">Nenhuma opção automática encontrada. Fale conosco no WhatsApp.</p>`;
+            container.innerHTML = `<p style="text-align:center">Nenhuma opção automática encontrada para esta quantidade. Fale conosco no WhatsApp.</p>`;
         } else {
             opts.forEach((o, i) => {
                 if(!app.tempRecOptions) app.tempRecOptions = [];
                 app.tempRecOptions[i] = o;
                 
-                // Renderiza card com 2 botões
                 container.innerHTML += `
                 <div class="start-card" style="margin-bottom:15px; padding:15px; border-left:4px solid var(--brand); cursor:default">
                     <div style="margin-bottom:10px">
@@ -254,17 +267,14 @@ const app = {
 
     selectRec(idx, withBox) {
         const opt = app.tempRecOptions[idx];
-        // Salva a escolha final
         this.selectedAlbum = {
             name: `${opt.name} (${withBox ? 'Com Maleta' : 'Sem Maleta'})`,
             price: withBox ? opt.priceBox : opt.price
         };
-        
         document.getElementById('modalAlbumRec').classList.add('hidden');
         this.showUpsellModal();
     },
 
-    // --- RESTO DO CÓDIGO (NAVEGAÇÃO E AVULSO) ---
     nav(d) {
         const s = this.sel[this.idx];
         if (d === 1 && this.mode === 'avulso') {

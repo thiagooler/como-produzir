@@ -1,4 +1,4 @@
-/* ARQUIVO: engine.js - Lógica Central V27 (Cálculo Preciso) */
+/* ARQUIVO: engine.js - Lógica Central V28 (Cálculo Completo) */
 
 const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const cleanName = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -180,7 +180,7 @@ const app = {
         this.load();
     },
 
-    // --- ALGORITMO DE RECOMENDAÇÃO V27 (CORRIGIDO) ---
+    // --- ALGORITMO CORRIGIDO COM MALETA ---
     showRecommendationModal(count) {
         const modal = document.getElementById('modalAlbumRec');
         const container = document.getElementById('recOptions');
@@ -188,75 +188,83 @@ const app = {
         container.innerHTML = '';
         
         const opts = [];
-        const sizes = ['15x20', '20x30', '30x40']; // Garante ordem fixa
+        const sizes = ['15x20', '20x30', '30x40']; 
         
         if(this.calculoConfig.tabela && this.calculoConfig.tabela.length > 0) {
-            
             sizes.forEach(sz => {
                 // 1. Calcula páginas necessárias
                 const photosPerPage = ALBUM_RULES[sz];
                 const neededPages = Math.ceil(count / photosPerPage);
                 
-                // 2. Filtra tabela (removendo espaços extras e forçando string)
-                // Ex: "30x40" deve bater com row.size "30x40"
-                const matchingTables = this.calculoConfig.tabela.filter(t => 
-                    String(t.size).trim() === sz && 
-                    parseInt(t.pages) >= neededPages
-                );
-                
-                // 3. Ordena pelo menor número de páginas possível
+                // 2. Filtra tabela (contém o tamanho) e ordena por páginas
+                // IMPORTANTE: Se neededPages for 4 e tabela começa em 20, ele deve pegar o de 20.
+                const matchingTables = this.calculoConfig.tabela.filter(t => String(t.size).includes(sz));
                 matchingTables.sort((a,b) => parseInt(a.pages) - parseInt(b.pages));
                 
-                if(matchingTables.length > 0) {
-                    const best = matchingTables[0];
-                    const total = (best.price + this.calculoConfig.custoFixo) * this.calculoConfig.markup;
+                // Pega o primeiro que satisfaz a condição >= neededPages
+                let validAlbum = matchingTables.find(t => parseInt(t.pages) >= neededPages);
+                
+                // Se não achou (ex: precisa de 110 pag e o max é 100), pega o maior disponível
+                if(!validAlbum && matchingTables.length > 0) validAlbum = matchingTables[matchingTables.length - 1];
+
+                if(validAlbum) {
+                    const mk = this.calculoConfig.markup || 1;
+                    const cf = this.calculoConfig.custoFixo || 0;
+                    
+                    const priceNormal = (validAlbum.price + cf) * mk;
+                    const priceBox = (validAlbum.priceBox + cf) * mk; // Pega coluna 4
                     
                     opts.push({ 
                         name: `Fotolivro ${sz}`, 
-                        desc: `${best.pages} páginas (cabe até ${best.pages * photosPerPage} fotos)`, 
-                        price: total 
+                        desc: `${validAlbum.pages} páginas (ideal para ${count} fotos)`, 
+                        price: priceNormal,
+                        priceBox: priceBox
                     });
                 }
             });
         }
 
         if(opts.length === 0) {
-            // Fallback se não encontrar nada
-            container.innerHTML = `
-            <div class="start-card" style="padding:20px; border-left:4px solid #999; cursor:pointer" onclick="app.selectRec(-1)">
-                <div style="font-weight:bold; font-size:16px; margin-bottom:5px">Consultar Orçamento</div>
-                <div style="font-size:13px; color:#555">Não encontramos um tamanho padrão exato, mas podemos fazer personalizado!</div>
-                <div class="rec-price" style="color:#333; margin-top:10px">Sob Consulta</div>
-            </div>`;
+            container.innerHTML = `<p style="text-align:center">Nenhuma opção automática encontrada. Fale conosco no WhatsApp.</p>`;
         } else {
             opts.forEach((o, i) => {
                 if(!app.tempRecOptions) app.tempRecOptions = [];
                 app.tempRecOptions[i] = o;
+                
+                // Renderiza card com 2 botões
                 container.innerHTML += `
-                <div class="start-card" style="margin-bottom:15px; cursor:pointer; padding:15px; border-left:4px solid var(--brand); display:flex; justify-content:space-between; align-items:center; text-align:left" onclick="app.selectRec(${i})">
-                    <div>
-                        <div style="font-weight:bold; font-size:16px; color:#333">${o.name}</div>
-                        <div style="font-size:12px; color:#666; margin-top:3px">${o.desc}</div>
+                <div class="start-card" style="margin-bottom:15px; padding:15px; border-left:4px solid var(--brand); cursor:default">
+                    <div style="margin-bottom:10px">
+                        <div style="font-weight:bold; font-size:18px; color:#333">${o.name}</div>
+                        <div style="font-size:12px; color:#666">${o.desc}</div>
                     </div>
-                    <div class="rec-price" style="color:var(--brand); font-size:18px">${BRL(o.price)}</div>
+                    <div style="display:flex; gap:10px">
+                        <button class="btn-start" style="font-size:13px; background:#fff; color:var(--brand); border:1px solid var(--brand)" onclick="app.selectRec(${i}, false)">
+                            Sem Maleta<br><strong>${BRL(o.price)}</strong>
+                        </button>
+                        <button class="btn-start" style="font-size:13px" onclick="app.selectRec(${i}, true)">
+                            Com Maleta<br><strong>${BRL(o.priceBox)}</strong>
+                        </button>
+                    </div>
                 </div>`;
             });
         }
-        
         modal.classList.remove('hidden');
     },
 
-    selectRec(idx) {
-        if(idx === -1) {
-            this.selectedAlbum = { name: "Fotolivro Personalizado (Sob Consulta)", price: 0 };
-        } else {
-            this.selectedAlbum = app.tempRecOptions[idx];
-        }
+    selectRec(idx, withBox) {
+        const opt = app.tempRecOptions[idx];
+        // Salva a escolha final
+        this.selectedAlbum = {
+            name: `${opt.name} (${withBox ? 'Com Maleta' : 'Sem Maleta'})`,
+            price: withBox ? opt.priceBox : opt.price
+        };
+        
         document.getElementById('modalAlbumRec').classList.add('hidden');
         this.showUpsellModal();
     },
 
-    // --- PADRÃO ---
+    // --- RESTO DO CÓDIGO (NAVEGAÇÃO E AVULSO) ---
     nav(d) {
         const s = this.sel[this.idx];
         if (d === 1 && this.mode === 'avulso') {

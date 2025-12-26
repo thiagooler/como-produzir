@@ -1,4 +1,4 @@
-/* ARQUIVO: engine.js - Lógica Central V26 (Cálculo Robusto) */
+/* ARQUIVO: engine.js - Lógica Central V27 (Cálculo Preciso) */
 
 const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const cleanName = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -7,7 +7,7 @@ const isDigitalProduct = (n) => cleanName(n).includes('arquivo') || cleanName(n)
 const isPrintProduct = (n) => cleanName(n).includes('foto') || cleanName(n).includes('revel');
 const isFrameProduct = (n) => cleanName(n).includes('porta') || cleanName(n).includes('moldura');
 
-// Regras fixas (Fotos por página)
+// REGRAS FIXAS (FOTOS POR PÁGINA)
 const ALBUM_RULES = {
     '15x20': 2,
     '20x30': 4,
@@ -94,7 +94,7 @@ const BASE_HTML = `
 <div id="modalDigitalWarn" class="modal-overlay hidden">
     <div class="card-box" style="text-align:center">
         <h2 style="color:#d4a72c">⚠️ Tem certeza?</h2>
-        <p style="font-size:14px; text-align:left">💡 <strong>DICA:</strong> O arquivo digital avulso custa <span id="priceDig"></span>. A Revelação 10x15 custa <span id="priceRev"></span> e <strong>você ganha o arquivo de brinde!</strong></p>
+        <p style="font-size:14px; text-align:left">💡 <strong>DICA DO STUDIO:</strong><br>O arquivo digital avulso custa <span id="priceDig"></span>.<br>A Revelação 10x15 custa <span id="priceRev"></span> e <strong>você ganha o arquivo de brinde!</strong></p>
         <button class="btn btn-primary" onclick="app.confirmSwitchToAvulso()">Mudar para Revelações</button>
         <button class="btn btn-sec" onclick="app.applyAllDigital()">Não, quero só os Arquivos</button>
     </div>
@@ -103,7 +103,7 @@ const BASE_HTML = `
 <div id="modalAlbumRec" class="modal-overlay hidden">
     <div class="card-box" style="width:100%">
         <h2 style="text-align:center">Sugestões de Álbum</h2>
-        <p style="text-align:center; font-size:13px; color:#666; margin-bottom:20px">Para <span id="recCount"></span> fotos selecionadas:</p>
+        <p style="text-align:center; font-size:13px; color:#666; margin-bottom:20px">Calculamos as melhores opções para <span id="recCount"></span> fotos:</p>
         <div id="recOptions"></div>
         <button class="btn btn-sec" onclick="document.getElementById('modalAlbumRec').classList.add('hidden')">Voltar e Editar</button>
     </div>
@@ -112,7 +112,7 @@ const BASE_HTML = `
 <div id="modalUpsell" class="modal-overlay hidden">
     <div class="card-box" style="text-align:center">
         <h2 style="color:var(--brand)">Álbum Definido! 🎉</h2>
-        <p>Deseja adicionar Quadros ou Revelações?</p>
+        <p>Deseja adicionar Quadros ou Revelações Avulsas?</p>
         <button class="btn btn-primary" onclick="app.switchToAvulso()">Sim, ver produtos</button>
         <button class="btn btn-sec" onclick="app.goToSummary()">Não, finalizar</button>
     </div>
@@ -180,7 +180,7 @@ const app = {
         this.load();
     },
 
-    // --- CÁLCULO INTELIGENTE DO ÁLBUM (V26) ---
+    // --- ALGORITMO DE RECOMENDAÇÃO V27 (CORRIGIDO) ---
     showRecommendationModal(count) {
         const modal = document.getElementById('modalAlbumRec');
         const container = document.getElementById('recOptions');
@@ -188,69 +188,75 @@ const app = {
         container.innerHTML = '';
         
         const opts = [];
+        const sizes = ['15x20', '20x30', '30x40']; // Garante ordem fixa
         
-        // Se a tabela existe
         if(this.calculoConfig.tabela && this.calculoConfig.tabela.length > 0) {
-            const rulesKeys = Object.keys(ALBUM_RULES); // ['15x20', '20x30', '30x40']
             
-            rulesKeys.forEach(ruleKey => {
-                // Procura na tabela do usuário se existe algo parecido com a regra (ex: "20x30" dentro de "Fotolivro 20x30")
-                const matchingTables = this.calculoConfig.tabela.filter(t => t.size.includes(ruleKey));
+            sizes.forEach(sz => {
+                // 1. Calcula páginas necessárias
+                const photosPerPage = ALBUM_RULES[sz];
+                const neededPages = Math.ceil(count / photosPerPage);
+                
+                // 2. Filtra tabela (removendo espaços extras e forçando string)
+                // Ex: "30x40" deve bater com row.size "30x40"
+                const matchingTables = this.calculoConfig.tabela.filter(t => 
+                    String(t.size).trim() === sz && 
+                    parseInt(t.pages) >= neededPages
+                );
+                
+                // 3. Ordena pelo menor número de páginas possível
+                matchingTables.sort((a,b) => parseInt(a.pages) - parseInt(b.pages));
                 
                 if(matchingTables.length > 0) {
-                    const photosPerPage = ALBUM_RULES[ruleKey];
-                    const neededPages = Math.ceil(count / photosPerPage);
+                    const best = matchingTables[0];
+                    const total = (best.price + this.calculoConfig.custoFixo) * this.calculoConfig.markup;
                     
-                    // Busca álbum com paginas suficientes
-                    const validAlbums = matchingTables.filter(t => t.pages >= neededPages);
-                    validAlbums.sort((a,b) => a.price - b.price); // Menor preço primeiro
-                    
-                    if(validAlbums.length > 0) {
-                        const best = validAlbums[0];
-                        const total = (best.price + this.calculoConfig.custoFixo) * this.calculoConfig.markup;
-                        opts.push({ 
-                            name: `Fotolivro ${ruleKey}`, 
-                            desc: `${best.pages} páginas (cabe ${best.pages * photosPerPage} fotos)`, 
-                            price: total 
-                        });
-                    }
+                    opts.push({ 
+                        name: `Fotolivro ${sz}`, 
+                        desc: `${best.pages} páginas (cabe até ${best.pages * photosPerPage} fotos)`, 
+                        price: total 
+                    });
                 }
             });
         }
 
-        // RENDERIZAÇÃO
-        if(opts.length > 0) {
+        if(opts.length === 0) {
+            // Fallback se não encontrar nada
+            container.innerHTML = `
+            <div class="start-card" style="padding:20px; border-left:4px solid #999; cursor:pointer" onclick="app.selectRec(-1)">
+                <div style="font-weight:bold; font-size:16px; margin-bottom:5px">Consultar Orçamento</div>
+                <div style="font-size:13px; color:#555">Não encontramos um tamanho padrão exato, mas podemos fazer personalizado!</div>
+                <div class="rec-price" style="color:#333; margin-top:10px">Sob Consulta</div>
+            </div>`;
+        } else {
             opts.forEach((o, i) => {
                 if(!app.tempRecOptions) app.tempRecOptions = [];
                 app.tempRecOptions[i] = o;
                 container.innerHTML += `
-                <div class="start-card" style="margin-bottom:10px; cursor:pointer; padding:15px; border-left:4px solid var(--brand)" onclick="app.selectRec(${i})">
-                    <div style="font-weight:bold; font-size:16px">${o.name}</div>
-                    <div style="font-size:12px; color:#666">${o.desc}</div>
-                    <div class="rec-price" style="color:var(--brand)">${BRL(o.price)}</div>
+                <div class="start-card" style="margin-bottom:15px; cursor:pointer; padding:15px; border-left:4px solid var(--brand); display:flex; justify-content:space-between; align-items:center; text-align:left" onclick="app.selectRec(${i})">
+                    <div>
+                        <div style="font-weight:bold; font-size:16px; color:#333">${o.name}</div>
+                        <div style="font-size:12px; color:#666; margin-top:3px">${o.desc}</div>
+                    </div>
+                    <div class="rec-price" style="color:var(--brand); font-size:18px">${BRL(o.price)}</div>
                 </div>`;
             });
-        } else {
-            // PLANO B: Se não achou nada (ou tabela vazia), mostra opção genérica
-            app.tempRecOptions = [{ name: "Fotolivro Personalizado", price: 0, desc: "Orçamento via WhatsApp" }];
-            container.innerHTML += `
-            <div class="start-card" style="margin-bottom:10px; cursor:pointer; padding:15px; border-left:4px solid #666" onclick="app.selectRec(0)">
-                <div style="font-weight:bold; font-size:16px">Consultar Valores</div>
-                <div style="font-size:12px; color:#666">Enviaremos o orçamento ideal para ${count} fotos.</div>
-                <div class="rec-price" style="color:#333">Sob Consulta</div>
-            </div>`;
         }
         
         modal.classList.remove('hidden');
     },
 
     selectRec(idx) {
-        this.selectedAlbum = app.tempRecOptions[idx];
+        if(idx === -1) {
+            this.selectedAlbum = { name: "Fotolivro Personalizado (Sob Consulta)", price: 0 };
+        } else {
+            this.selectedAlbum = app.tempRecOptions[idx];
+        }
         document.getElementById('modalAlbumRec').classList.add('hidden');
         this.showUpsellModal();
     },
 
-    // --- ROTINAS PADRÃO ---
+    // --- PADRÃO ---
     nav(d) {
         const s = this.sel[this.idx];
         if (d === 1 && this.mode === 'avulso') {
@@ -465,6 +471,25 @@ const app = {
         document.getElementById('view-summary').classList.remove('hidden');
         document.getElementById('summaryContent').innerHTML = html;
         document.getElementById('btnWhats').href = `https://wa.me/5542998370150?text=${encodeURIComponent(txt)}`;
+    },
+    calcTotalAvulso() {
+        let total = 0, itemsCount = 0, summary = {};
+        this.sel.forEach(s => {
+            if(s.isRemoved) return;
+            Object.entries(s.extras).forEach(([nm, qtd]) => {
+                let prd = this.produtos.find(p=>p.nome===nm);
+                if(prd) { total += prd.preco * qtd; itemsCount += qtd; summary[nm] = (summary[nm]||0) + qtd; }
+            });
+        });
+        let discount = 0;
+        this.creditos.forEach(c => {
+            if(summary[c.nome]) {
+                let free = Math.min(summary[c.nome], c.qtd);
+                let prd = this.produtos.find(p=>p.nome===c.nome);
+                if(prd && free > 0) discount += (free * prd.preco);
+            }
+        });
+        return { total, discount, itemsCount, summary };
     }
 };
 

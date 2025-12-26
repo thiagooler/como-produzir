@@ -1,4 +1,4 @@
-/* ARQUIVO: engine.js - Lógica Central V23 (New Design) */
+/* ARQUIVO: engine.js - Lógica Central V24 (Cálculo Fotolivro Corrigido) */
 
 const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const cleanName = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -6,6 +6,13 @@ const getDim = (name) => { const m = name.match(/\d+x\d+/i); return m ? m[0].toL
 const isDigitalProduct = (n) => cleanName(n).includes('arquivo') || cleanName(n).includes('digital');
 const isPrintProduct = (n) => cleanName(n).includes('foto') || cleanName(n).includes('revel');
 const isFrameProduct = (n) => cleanName(n).includes('porta') || cleanName(n).includes('moldura');
+
+// Regras fixas de diagramação (Fotos por página)
+const ALBUM_RULES = {
+    '15x20': 2,
+    '20x30': 4,
+    '30x40': 5
+};
 
 const BASE_HTML = `
 <div id="view-start" class="full-screen-overlay" style="padding:0; background:#f4f4f4">
@@ -121,6 +128,7 @@ const BASE_HTML = `
 <div id="modalAlbumRec" class="modal-overlay hidden">
     <div class="card-box" style="width:100%">
         <h2 style="text-align:center">Sugestões de Álbum</h2>
+        <p style="text-align:center; font-size:13px; color:#666; margin-bottom:20px">Calculamos o melhor tamanho para suas <span id="recCount">0</span> fotos:</p>
         <div id="recOptions"></div>
         <button class="btn btn-sec" onclick="document.getElementById('modalAlbumRec').classList.add('hidden')">Voltar</button>
     </div>
@@ -155,9 +163,7 @@ const app = {
         document.body.innerHTML = BASE_HTML;
         if(typeof CLIENT_DATA === 'undefined') return alert("Erro de Dados.");
         
-        if(CLIENT_DATA.clientName) {
-            document.getElementById('greeting').innerText = `Olá, ${CLIENT_DATA.clientName}`;
-        }
+        if(CLIENT_DATA.clientName) document.getElementById('greeting').innerText = `Olá, ${CLIENT_DATA.clientName}`;
 
         this.fotos = CLIENT_DATA.fotos;
         this.produtos = CLIENT_DATA.produtos;
@@ -168,6 +174,7 @@ const app = {
 
         this.sel = this.fotos.map(()=>({ inAlbum: false, extras: {}, isRemoved: false }));
         
+        // Regra < 20 fotos
         if(this.fotos.length < 20) {
             this.setMode('avulso');
             return;
@@ -211,7 +218,7 @@ const app = {
     checkAllDigital() {
         const dig = this.produtos.find(p => isDigitalProduct(p.nome));
         const rev = this.produtos.find(p => p.nome.includes('10x15'));
-        if(!dig) return alert("Produto 'Arquivo Digital' não cadastrado no painel.");
+        if(!dig) return alert("Produto 'Arquivo Digital' não cadastrado.");
         document.getElementById('priceDig').innerText = BRL(dig.preco);
         if(rev) document.getElementById('priceRev').innerText = BRL(rev.preco);
         document.getElementById('modalDigitalWarn').classList.remove('hidden');
@@ -272,15 +279,12 @@ const app = {
         const p = this.produtos[prodIdx];
         const name = p.nome;
         const s = this.sel[this.idx];
-        
         if(d > 0) s.isRemoved = false;
-
         const cur = s.extras[name] || 0;
         let next = Math.max(0, cur + d);
         if(isDigitalProduct(name)) next = Math.min(next, 1);
         if(next === 0) delete s.extras[name];
         else s.extras[name] = next;
-        
         this.updateUI();
     },
 
@@ -377,17 +381,14 @@ const app = {
             const safe = i;
             const el = document.getElementById(`val_${safe}`);
             const row = document.getElementById(`row_${safe}`);
-            
             if(el && row) {
                 el.innerText = extras[p.nome] || 0;
-                
                 if(s.isRemoved) {
                     row.classList.add('disabled');
                 } else {
                     row.classList.remove('disabled');
                     if(isDigitalProduct(p.nome) && hasPrint) row.classList.add('hidden-item');
                     else if(isDigitalProduct(p.nome)) row.classList.remove('hidden-item');
-                    
                     if(isFrameProduct(p.nome)) {
                         const dim = getDim(p.nome);
                         const match = Object.keys(extras).some(k => isPrintProduct(k) && getDim(k) === dim && extras[k] > 0);
@@ -413,34 +414,43 @@ const app = {
     showRecommendationModal(count) {
         const modal = document.getElementById('modalAlbumRec');
         const container = document.getElementById('recOptions');
+        document.getElementById('recCount').innerText = count;
         container.innerHTML = '';
         
         const opts = [];
-        const sizes = [...new Set(this.calculoConfig.tabela.map(x=>x.size))];
+        const uniqueSizes = [...new Set(this.calculoConfig.tabela.map(x=>x.size))];
         
-        sizes.forEach(sz => {
-            const rules = this.calculoConfig.regras || {}; 
-            const photosPerPage = rules[sz] || 4; 
+        uniqueSizes.forEach(sz => {
+            // USA AS REGRAS FIXAS V24
+            const photosPerPage = ALBUM_RULES[sz] || 4; 
             const neededPages = Math.ceil(count / photosPerPage);
+            
             const matches = this.calculoConfig.tabela.filter(t => t.size === sz && t.pages >= neededPages);
             matches.sort((a,b) => a.price - b.price);
+            
             if(matches.length > 0) {
                 const best = matches[0];
                 const total = (best.price + this.calculoConfig.custoFixo) * this.calculoConfig.markup;
-                const totalBox = (best.priceBox + this.calculoConfig.custoFixo) * this.calculoConfig.markup;
-                opts.push({ name: `Fotolivro ${sz}`, desc: `${best.pages} págs`, price: total, boxPrice: totalBox });
+                opts.push({ name: `Fotolivro ${sz}`, desc: `${best.pages} págs`, price: total });
             }
         });
 
-        opts.forEach((o, i) => {
-            container.innerHTML += `
-            <div class="card-box" style="margin-bottom:10px; cursor:pointer" onclick="app.selectRec(${i})">
-                <div style="font-weight:bold">${o.name} (${o.desc})</div>
-                <div class="rec-price">${BRL(o.price)}</div>
-            </div>`;
-        });
+        if(opts.length === 0) {
+            container.innerHTML = "<p>Nenhum álbum encontrado para esta quantidade de fotos.</p>";
+        } else {
+            opts.forEach((o, i) => {
+                // Guarda opções temporariamente
+                if(!app.tempRecOptions) app.tempRecOptions = [];
+                app.tempRecOptions[i] = o;
+
+                container.innerHTML += `
+                <div class="start-card" style="margin-bottom:10px; cursor:pointer; padding:15px; border-left:4px solid var(--brand)" onclick="app.selectRec(${i})">
+                    <div style="font-weight:bold; font-size:16px">${o.name} (${o.desc})</div>
+                    <div class="rec-price" style="color:var(--brand)">${BRL(o.price)}</div>
+                </div>`;
+            });
+        }
         
-        app.tempRecOptions = opts;
         modal.classList.remove('hidden');
     },
 

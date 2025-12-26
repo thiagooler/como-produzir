@@ -1,4 +1,4 @@
-/* ARQUIVO: style.css (V26 - Fix Rodapé) */
+/* ARQUIVO: style.css (V27 - Footer Action) */
 :root {
   --bg: #f4f4f4; --card: #ffffff; --text: #333333; --border: #d0d7de;
   --primary-color: #333; --accent-color: #007bff; --accent-hover: #0056b3;
@@ -12,7 +12,6 @@ body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
 .start-title { margin: 0; font-size: 1.8rem; color: var(--primary-color); }
 .start-subtitle { margin-top: 10px; color: #666; font-size: 1.1rem; }
 
-/* Adicionado padding-bottom aqui também para garantir rolagem */
 .start-container { max-width: 1200px; margin: 40px auto; padding: 0 20px 100px 20px; flex: 1; width: 100%; overflow-y: auto; }
 .options-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; justify-content: center; padding-bottom: 40px; }
 
@@ -45,13 +44,7 @@ body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
 @media(max-width: 768px) { 
   .gallery-grid { display: flex; flex-direction: column; overflow-y: auto; } 
   .photo-area { height: 50vh !important; flex-shrink: 0; }
-  
-  /* CORREÇÃO MOBILE: Espaço GIGANTE no fundo para garantir visibilidade */
-  .sidebar { 
-      height: auto !important; 
-      overflow: visible !important; 
-      padding-bottom: 300px !important; /* Aumentado para 300px */
-  }
+  .sidebar { height: auto !important; overflow: visible !important; padding-bottom: 300px !important; }
 }
 
 /* FOTO */
@@ -66,18 +59,11 @@ body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
 .status-overlay.in-album { color: var(--brand); border-color: var(--brand); display: block; }
 .status-overlay.out-album { color: var(--danger); border-color: var(--danger); display: block; transform: rotate(5deg); }
 
-/* SIDEBAR - CORREÇÃO DESKTOP */
+/* SIDEBAR */
 .sidebar { 
-    background: var(--card); 
-    border-left: 1px solid var(--border); 
-    padding: 20px; 
-    overflow-y: auto; 
-    display: flex; 
-    flex-direction: column; 
-    gap: 15px; 
-    z-index: 20; 
-    position: relative; 
-    padding-bottom: 250px; /* Aumentado para 250px no desktop */
+    background: var(--card); border-left: 1px solid var(--border); 
+    padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; 
+    z-index: 20; position: relative; padding-bottom: 250px; 
 }
 
 .prod-group { margin-bottom: 15px; }
@@ -95,7 +81,8 @@ body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
 .stepper.active { background: #dafbe1; border-color: var(--brand); color: var(--brand); }
 .stepper.active button { color: var(--brand); background: #f0fff4; }
 
-.full-screen-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 100; overflow-y: auto; padding-bottom: 100px; }
+/* MODALS */
+.full-screen-overlay { position: absolute; inset: 0; background: var(--bg); z-index: 100; overflow-y: auto; padding: 20px; padding-bottom: 150px; }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
 .card-box { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 0 auto 15px; max-width: 500px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: relative; width: 100%; }
 .hidden { display: none !important; } 
@@ -109,18 +96,33 @@ body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
 .btn-toggle-album.yes.active { background: var(--brand); color: white; }
 .btn-toggle-album.no { border-color: var(--danger); background: #fff0f0; color: #cf222e; margin-top: 10px; }
 .btn-toggle-album.no.active { background: var(--danger); color: white; }
-
-/* Botão Finalizar com Margem Extra */
-#btnFinish { background-color: var(--brand) !important; color: white !important; margin-top: 30px; margin-bottom: 60px; }
-
 .btn-discard { background: white; border: 1px solid var(--danger); color: var(--danger); transition: .2s; }
 .btn-discard:hover, .btn-discard.active { background: var(--danger); color: white; }
 
-/* FOOTER FIXO */
-.sticky-footer { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid var(--border); padding: 15px 20px; z-index: 999; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -4px 12px rgba(0,0,0,0.05); }
+/* FOOTER ATUALIZADO V27 */
+.sticky-footer { 
+    position: fixed; bottom: 0; left: 0; right: 0; 
+    background: #fff; border-top: 1px solid var(--border); 
+    padding: 10px 20px; /* Reduzi um pouco padding vertical */
+    z-index: 999; 
+    display: flex; justify-content: space-between; align-items: center; 
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.05); 
+}
+.footer-info { display: flex; flex-direction: column; }
 .total-price { font-size: 18px; font-weight: bold; }
 .credit-positive { color: var(--brand); }
 .credit-negative { color: #333; }
+
+/* Botão de Finalizar no Footer */
+.btn-footer-finish { 
+    background: var(--brand); color: white; 
+    border: none; padding: 12px 25px; 
+    border-radius: 25px; font-weight: bold; 
+    font-size: 15px; cursor: pointer; 
+    box-shadow: 0 4px 10px rgba(45, 164, 78, 0.3);
+    transition: transform 0.2s;
+}
+.btn-footer-finish:hover { background-color: #2c974b; transform: scale(1.05); }
 
 .receipt-line { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 14px; }
 .receipt-total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 18px; margin-top: 15px; padding-top: 10px; border-top: 2px solid #333; }

@@ -1,4 +1,4 @@
-/* ARQUIVO: engine.js - Lógica Central V24 (Cálculo Fotolivro Corrigido) */
+/* ARQUIVO: engine.js - Lógica Central V25 (Crédito & Auto-Avanço) */
 
 const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const cleanName = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -7,12 +7,8 @@ const isDigitalProduct = (n) => cleanName(n).includes('arquivo') || cleanName(n)
 const isPrintProduct = (n) => cleanName(n).includes('foto') || cleanName(n).includes('revel');
 const isFrameProduct = (n) => cleanName(n).includes('porta') || cleanName(n).includes('moldura');
 
-// Regras fixas de diagramação (Fotos por página)
-const ALBUM_RULES = {
-    '15x20': 2,
-    '20x30': 4,
-    '30x40': 5
-};
+// Regras fixas V24
+const ALBUM_RULES = { '15x20': 2, '20x30': 4, '30x40': 5 };
 
 const BASE_HTML = `
 <div id="view-start" class="full-screen-overlay" style="padding:0; background:#f4f4f4">
@@ -29,49 +25,29 @@ const BASE_HTML = `
 
         <div class="options-grid">
             <div class="start-card">
-                <div class="card-image-container">
-                    <img src="https://www.phooto.com.br/wp-content/uploads/2018/11/capadura21x28-semselo.png" alt="Fotolivro" class="img-contain">
-                </div>
+                <div class="card-image-container"><img src="https://www.phooto.com.br/wp-content/uploads/2018/11/capadura21x28-semselo.png" alt="Fotolivro" class="img-contain"></div>
                 <div class="card-content">
-                    <div>
-                        <div class="card-title">Fotolivro</div>
-                        <p class="card-desc">Eternize seus melhores momentos em um álbum de capa dura e acabamento premium.</p>
-                    </div>
+                    <div><div class="card-title">Fotolivro</div><p class="card-desc">Eternize seus melhores momentos em um álbum de capa dura e acabamento premium.</p></div>
                     <button class="btn-start" onclick="app.setMode('album')">Selecionar</button>
                 </div>
             </div>
-
             <div class="start-card">
-                <div class="card-image-container">
-                    <img src="https://www.dreambooks.com.br/images/blog_brasil/por_que_revelar_fotos_ainda_eh_tao_importante/conteudo_open%20graph_revelarfotos.jpg" alt="Revelação" class="img-cover">
-                </div>
+                <div class="card-image-container"><img src="https://www.dreambooks.com.br/images/blog_brasil/por_que_revelar_fotos_ainda_eh_tao_importante/conteudo_open%20graph_revelarfotos.jpg" alt="Revelação" class="img-cover"></div>
                 <div class="card-content">
-                    <div>
-                        <div class="card-title">Revelação de Fotos</div>
-                        <p class="card-desc">Imprima suas memórias em papel fotográfico de alta qualidade. Vários tamanhos.</p>
-                    </div>
+                    <div><div class="card-title">Revelação de Fotos</div><p class="card-desc">Imprima suas memórias em papel fotográfico de alta qualidade.</p></div>
                     <button class="btn-start" onclick="app.setMode('avulso')">Selecionar</button>
                 </div>
             </div>
-
             <div class="start-card">
-                <div class="card-image-container">
-                    <img src="https://img.odcdn.com.br/wp-content/uploads/2024/09/como-recuperar-arquivos-no-windows-1920x1080.jpg" alt="Digital" class="img-cover">
-                </div>
+                <div class="card-image-container"><img src="https://img.odcdn.com.br/wp-content/uploads/2024/09/como-recuperar-arquivos-no-windows-1920x1080.jpg" alt="Digital" class="img-cover"></div>
                 <div class="card-content">
-                    <div>
-                        <div class="card-title">Fotos em Arquivo</div>
-                        <p class="card-desc">Receba todas as fotos do evento em alta resolução via download ou link na nuvem.</p>
-                    </div>
+                    <div><div class="card-title">Fotos em Arquivo</div><p class="card-desc">Receba todas as fotos do evento em alta resolução via download.</p></div>
                     <button class="btn-start" onclick="app.checkAllDigital()">Selecionar</button>
                 </div>
             </div>
         </div>
     </div>
-
-    <footer class="start-footer">
-        &copy; 2025 Studio NBV - Todos os direitos reservados.
-    </footer>
+    <footer class="start-footer">&copy; 2025 Studio NBV</footer>
 </div>
 
 <div id="view-gallery" class="main-container hidden">
@@ -114,12 +90,7 @@ const BASE_HTML = `
 <div id="modalDigitalWarn" class="modal-overlay hidden">
     <div class="card-box" style="text-align:center">
         <h2 style="color:#d4a72c">⚠️ Tem certeza?</h2>
-        <p style="font-size:14px; text-align:left; line-height:1.5; color:#444">
-            💡 <strong>DICA DO STUDIO:</strong><br><br>
-            O arquivo digital avulso custa <span id="priceDig">R$ -</span>.<br>
-            A Revelação 10x15 custa <span id="priceRev">R$ -</span> e <strong>você ganha o arquivo de brinde!</strong><br><br>
-            Compensa mais fazer a revelação. Deseja mudar?
-        </p>
+        <p style="font-size:14px; text-align:left">💡 <strong>DICA DO STUDIO:</strong><br>O arquivo digital avulso custa <span id="priceDig"></span>.<br>A Revelação 10x15 custa <span id="priceRev"></span> e <strong>você ganha o arquivo de brinde!</strong></p>
         <button class="btn btn-primary" onclick="app.confirmSwitchToAvulso()">Mudar para Revelações</button>
         <button class="btn btn-sec" onclick="app.applyAllDigital()">Não, quero só os Arquivos</button>
     </div>
@@ -128,7 +99,7 @@ const BASE_HTML = `
 <div id="modalAlbumRec" class="modal-overlay hidden">
     <div class="card-box" style="width:100%">
         <h2 style="text-align:center">Sugestões de Álbum</h2>
-        <p style="text-align:center; font-size:13px; color:#666; margin-bottom:20px">Calculamos o melhor tamanho para suas <span id="recCount">0</span> fotos:</p>
+        <p style="text-align:center; font-size:13px; color:#666">Calculamos o melhor tamanho para <span id="recCount"></span> fotos:</p>
         <div id="recOptions"></div>
         <button class="btn btn-sec" onclick="document.getElementById('modalAlbumRec').classList.add('hidden')">Voltar</button>
     </div>
@@ -137,7 +108,7 @@ const BASE_HTML = `
 <div id="modalUpsell" class="modal-overlay hidden">
     <div class="card-box" style="text-align:center">
         <h2 style="color:var(--brand)">Álbum Definido! 🎉</h2>
-        <p>Deseja adicionar <strong>Quadros</strong> ou <strong>Revelações Avulsas</strong>?</p>
+        <p>Deseja adicionar Quadros ou Revelações Avulsas?</p>
         <button class="btn btn-primary" onclick="app.switchToAvulso()">Sim, ver produtos</button>
         <button class="btn btn-sec" onclick="app.goToSummary()">Não, finalizar</button>
     </div>
@@ -162,7 +133,6 @@ const app = {
     init() {
         document.body.innerHTML = BASE_HTML;
         if(typeof CLIENT_DATA === 'undefined') return alert("Erro de Dados.");
-        
         if(CLIENT_DATA.clientName) document.getElementById('greeting').innerText = `Olá, ${CLIENT_DATA.clientName}`;
 
         this.fotos = CLIENT_DATA.fotos;
@@ -174,7 +144,6 @@ const app = {
 
         this.sel = this.fotos.map(()=>({ inAlbum: false, extras: {}, isRemoved: false }));
         
-        // Regra < 20 fotos
         if(this.fotos.length < 20) {
             this.setMode('avulso');
             return;
@@ -191,7 +160,7 @@ const app = {
         if(this.entrada > 0 || this.creditos.length > 0) {
             document.getElementById('startInfo').classList.remove('hidden');
             const list = document.getElementById('startList');
-            if(this.entrada > 0) list.innerHTML += `<li>✅ Entrada Paga: <strong>${BRL(this.entrada)}</strong></li>`;
+            if(this.entrada > 0) list.innerHTML += `<li>✅ Crédito de Entrada: <strong>${BRL(this.entrada)}</strong></li>`;
             this.creditos.forEach(c => list.innerHTML += `<li>🎁 Crédito: <strong>${c.qtd}x ${c.nome}</strong></li>`);
         }
     },
@@ -205,46 +174,22 @@ const app = {
         if(m === 'album') {
             document.getElementById('controlsAlbum').classList.remove('hidden');
             document.getElementById('controlsAvulso').classList.add('hidden');
-            document.getElementById('footerText').innerText = "Resumo Álbum";
+            this.updateAlbumStats(); // Atualiza rodapé álbum
         } else {
             document.getElementById('controlsAlbum').classList.add('hidden');
             document.getElementById('controlsAvulso').classList.remove('hidden');
-            document.getElementById('footerText').innerText = "Total Extras";
             this.renderSidebarAvulso();
+            this.updateStickyAvulso(); // Atualiza rodapé avulso
         }
         this.load();
     },
 
-    checkAllDigital() {
-        const dig = this.produtos.find(p => isDigitalProduct(p.nome));
-        const rev = this.produtos.find(p => p.nome.includes('10x15'));
-        if(!dig) return alert("Produto 'Arquivo Digital' não cadastrado.");
-        document.getElementById('priceDig').innerText = BRL(dig.preco);
-        if(rev) document.getElementById('priceRev').innerText = BRL(rev.preco);
-        document.getElementById('modalDigitalWarn').classList.remove('hidden');
-    },
-
-    confirmSwitchToAvulso() {
-        document.getElementById('modalDigitalWarn').classList.add('hidden');
-        this.setMode('avulso');
-    },
-
-    applyAllDigital() {
-        const dig = this.produtos.find(p => isDigitalProduct(p.nome));
-        this.sel.forEach(s => {
-            s.isRemoved = false; s.inAlbum = false; s.extras = {}; 
-            s.extras[dig.nome] = 1;
-        });
-        document.getElementById('modalDigitalWarn').classList.add('hidden');
-        this.mode = 'avulso'; 
-        this.goToSummary();
-    },
-
+    // --- FUNÇÕES COMPARTILHADAS E NAVEGAÇÃO ---
     nav(d) {
         const s = this.sel[this.idx];
         if (d === 1 && this.mode === 'avulso') {
             const hasProd = Object.values(s.extras).reduce((a,b)=>a+b,0) > 0;
-            if (!hasProd && !s.isRemoved) return alert("⚠️ Decida sobre esta foto:\nEscolha um produto ou clique em 'Descartar'.");
+            if (!hasProd && !s.isRemoved) return alert("⚠️ Escolha um produto ou descarte a foto.");
         }
         this.idx = (this.idx + d + this.fotos.length) % this.fotos.length;
         this.load();
@@ -259,33 +204,6 @@ const app = {
         const isLast = this.idx === this.fotos.length - 1;
         if(isLast) document.getElementById('btnFinish').classList.remove('hidden');
         else document.getElementById('btnFinish').classList.add('hidden');
-    },
-
-    toggleInAlbum(status) {
-        this.sel[this.idx].inAlbum = status;
-        if(status) this.sel[this.idx].isRemoved = false;
-        this.updateUI();
-    },
-
-    toggleDiscard() {
-        const s = this.sel[this.idx];
-        s.isRemoved = !s.isRemoved;
-        if(s.isRemoved) { s.extras = {}; s.inAlbum = false; }
-        this.updateUI();
-        if(s.isRemoved && this.idx < this.fotos.length-1) setTimeout(()=>this.nav(1), 300);
-    },
-
-    chg(prodIdx, d) {
-        const p = this.produtos[prodIdx];
-        const name = p.nome;
-        const s = this.sel[this.idx];
-        if(d > 0) s.isRemoved = false;
-        const cur = s.extras[name] || 0;
-        let next = Math.max(0, cur + d);
-        if(isDigitalProduct(name)) next = Math.min(next, 1);
-        if(next === 0) delete s.extras[name];
-        else s.extras[name] = next;
-        this.updateUI();
     },
 
     updateUI() {
@@ -307,8 +225,7 @@ const app = {
                 btnYes.classList.remove('active'); btnNo.classList.add('active');
             }
             this.updateAlbumStats();
-        } 
-        else { 
+        } else { 
             const btnDisc = document.getElementById('btnDiscard');
             if(s.isRemoved) {
                 btnDisc.classList.add('active'); btnDisc.innerText = "Recuperar Foto";
@@ -322,12 +239,41 @@ const app = {
         }
     },
 
-    updateAlbumStats() {
-        const count = this.sel.filter(x=>x.inAlbum).length;
-        document.getElementById('albumStatusText').innerText = this.albumConfig.incluso > 0 ? `${count}/${this.albumConfig.incluso} selecionadas` : `${count} fotos`;
-        document.getElementById('stickTotal').innerText = BRL(0);
+    // --- LÓGICA FOTOLIVRO (COM AVANÇO AUTOMÁTICO) ---
+    toggleInAlbum(status) {
+        this.sel[this.idx].inAlbum = status;
+        if(status) this.sel[this.idx].isRemoved = false;
+        
+        this.updateUI();
+        
+        // AUTO AVANÇO V25
+        if(this.idx < this.fotos.length - 1) {
+            setTimeout(() => this.nav(1), 400); // Espera 400ms e avança
+        }
     },
 
+    updateAlbumStats() {
+        const count = this.sel.filter(x=>x.inAlbum).length;
+        let extraCost = 0;
+        
+        // Se for pacote fechado, calcula extras
+        if(this.albumConfig.incluso > 0) {
+            const extra = Math.max(0, count - this.albumConfig.incluso);
+            extraCost = extra * this.albumConfig.extra;
+            
+            document.getElementById('albumStatusText').innerText = `${count}/${this.albumConfig.incluso} selecionadas`;
+            if(extra > 0) document.getElementById('albumPriceText').innerText = `${extra} extras (+${BRL(extraCost)})`;
+            else document.getElementById('albumPriceText').innerText = "Dentro do pacote";
+        } else {
+            document.getElementById('albumStatusText').innerText = `${count} fotos`;
+            document.getElementById('albumPriceText').innerText = "Valor calculado no final";
+        }
+
+        // ATUALIZA RODAPÉ COM CRÉDITO
+        this.updateFooterDisplay(extraCost);
+    },
+
+    // --- LÓGICA AVULSO (COM CRÉDITO) ---
     updateStickyAvulso() {
         let total = 0;
         this.sel.forEach(s => {
@@ -337,9 +283,56 @@ const app = {
                 if(p) total += p.preco * q;
             });
         });
-        document.getElementById('stickTotal').innerText = BRL(total);
+        this.updateFooterDisplay(total);
     },
 
+    // FUNÇÃO UNIFICADA DE RODAPÉ (CRÉDITO VS A PAGAR)
+    updateFooterDisplay(currentCost) {
+        const saldo = this.entrada - currentCost;
+        const elTotal = document.getElementById('stickTotal');
+        const elLabel = document.getElementById('footerText');
+
+        if(saldo >= 0) {
+            elLabel.innerText = "Crédito Restante";
+            elTotal.innerText = BRL(saldo);
+            elTotal.className = "total-price credit-positive";
+        } else {
+            elLabel.innerText = "Valor a Pagar";
+            elTotal.innerText = BRL(Math.abs(saldo));
+            elTotal.className = "total-price credit-negative";
+        }
+    },
+
+    // --- LÓGICA DIGITAL / EXTRAS (MANTIDAS V24) ---
+    checkAllDigital() {
+        const dig = this.produtos.find(p => isDigitalProduct(p.nome));
+        const rev = this.produtos.find(p => p.nome.includes('10x15'));
+        if(!dig) return alert("Produto 'Arquivo Digital' não cadastrado.");
+        document.getElementById('priceDig').innerText = BRL(dig.preco);
+        if(rev) document.getElementById('priceRev').innerText = BRL(rev.preco);
+        document.getElementById('modalDigitalWarn').classList.remove('hidden');
+    },
+    confirmSwitchToAvulso() { document.getElementById('modalDigitalWarn').classList.add('hidden'); this.setMode('avulso'); },
+    applyAllDigital() {
+        const dig = this.produtos.find(p => isDigitalProduct(p.nome));
+        this.sel.forEach(s => { s.isRemoved=false; s.inAlbum=false; s.extras={}; s.extras[dig.nome]=1; });
+        document.getElementById('modalDigitalWarn').classList.add('hidden');
+        this.mode = 'avulso'; this.goToSummary();
+    },
+    toggleDiscard() {
+        const s = this.sel[this.idx]; s.isRemoved = !s.isRemoved;
+        if(s.isRemoved) { s.extras = {}; s.inAlbum = false; }
+        this.updateUI();
+        if(s.isRemoved && this.idx < this.fotos.length-1) setTimeout(()=>this.nav(1), 300);
+    },
+    chg(prodIdx, d) {
+        const p = this.produtos[prodIdx]; const name = p.nome; const s = this.sel[this.idx];
+        if(d > 0) s.isRemoved = false;
+        const cur = s.extras[name] || 0; let next = Math.max(0, cur + d);
+        if(isDigitalProduct(name)) next = Math.min(next, 1);
+        if(next === 0) delete s.extras[name]; else s.extras[name] = next;
+        this.updateUI();
+    },
     renderSidebarAvulso() {
         const container = document.getElementById('dynamicProds');
         if(container.innerHTML === '') { 
@@ -357,14 +350,7 @@ const app = {
                     const safe = p.originalIndex;
                     const cred = this.creditos.find(c=>c.nome===p.nome);
                     let badge = cred ? `<span class="digital-badge">${cred.qtd} un. crédito</span>` : '';
-                    html += `<div class="prod-item" id="row_${safe}">
-                        <div class="prod-info"><div>${p.nome} ${badge}</div><div>${BRL(p.preco)}</div></div>
-                        <div class="stepper" id="stp_${safe}">
-                            <button onclick="app.chg(${safe}, -1)">−</button>
-                            <span id="val_${safe}">0</span>
-                            <button onclick="app.chg(${safe}, 1)">+</button>
-                        </div>
-                    </div>`;
+                    html += `<div class="prod-item" id="row_${safe}"><div class="prod-info"><div>${p.nome} ${badge}</div><div>${BRL(p.preco)}</div></div><div class="stepper" id="stp_${safe}"><button onclick="app.chg(${safe}, -1)">−</button><span id="val_${safe}">0</span><button onclick="app.chg(${safe}, 1)">+</button></div></div>`;
                 });
                 container.innerHTML += html + `</div>`;
             };
@@ -372,20 +358,14 @@ const app = {
             mkGroup('Molduras', grps['Porta Retratos']);
             mkGroup('Outros', grps['Outros']);
         }
-        
-        const s = this.sel[this.idx];
-        const extras = s.extras;
+        const s = this.sel[this.idx]; const extras = s.extras;
         const hasPrint = Object.keys(extras).some(k => isPrintProduct(k) && extras[k] > 0);
-
         this.produtos.forEach((p, i) => {
-            const safe = i;
-            const el = document.getElementById(`val_${safe}`);
-            const row = document.getElementById(`row_${safe}`);
+            const safe = i; const el = document.getElementById(`val_${safe}`); const row = document.getElementById(`row_${safe}`);
             if(el && row) {
                 el.innerText = extras[p.nome] || 0;
-                if(s.isRemoved) {
-                    row.classList.add('disabled');
-                } else {
+                if(s.isRemoved) row.classList.add('disabled');
+                else {
                     row.classList.remove('disabled');
                     if(isDigitalProduct(p.nome) && hasPrint) row.classList.add('hidden-item');
                     else if(isDigitalProduct(p.nome)) row.classList.remove('hidden-item');
@@ -399,127 +379,79 @@ const app = {
             }
         });
     },
-
     finishStep() {
         if(this.mode === 'album') {
             const count = this.sel.filter(x=>x.inAlbum).length;
             if(count === 0) return alert("Selecione fotos para o álbum.");
             if(this.albumConfig.incluso > 0) this.showUpsellModal();
             else this.showRecommendationModal(count);
-        } else {
-            this.goToSummary();
-        }
+        } else this.goToSummary();
     },
-
     showRecommendationModal(count) {
-        const modal = document.getElementById('modalAlbumRec');
-        const container = document.getElementById('recOptions');
-        document.getElementById('recCount').innerText = count;
-        container.innerHTML = '';
-        
-        const opts = [];
-        const uniqueSizes = [...new Set(this.calculoConfig.tabela.map(x=>x.size))];
-        
-        uniqueSizes.forEach(sz => {
-            // USA AS REGRAS FIXAS V24
-            const photosPerPage = ALBUM_RULES[sz] || 4; 
-            const neededPages = Math.ceil(count / photosPerPage);
-            
+        const modal = document.getElementById('modalAlbumRec'); const container = document.getElementById('recOptions');
+        container.innerHTML = ''; document.getElementById('recCount').innerText = count;
+        const opts = []; const sizes = [...new Set(this.calculoConfig.tabela.map(x=>x.size))];
+        sizes.forEach(sz => {
+            const photosPerPage = ALBUM_RULES[sz] || 4; const neededPages = Math.ceil(count / photosPerPage);
             const matches = this.calculoConfig.tabela.filter(t => t.size === sz && t.pages >= neededPages);
             matches.sort((a,b) => a.price - b.price);
-            
             if(matches.length > 0) {
                 const best = matches[0];
                 const total = (best.price + this.calculoConfig.custoFixo) * this.calculoConfig.markup;
                 opts.push({ name: `Fotolivro ${sz}`, desc: `${best.pages} págs`, price: total });
             }
         });
-
-        if(opts.length === 0) {
-            container.innerHTML = "<p>Nenhum álbum encontrado para esta quantidade de fotos.</p>";
-        } else {
-            opts.forEach((o, i) => {
-                // Guarda opções temporariamente
-                if(!app.tempRecOptions) app.tempRecOptions = [];
-                app.tempRecOptions[i] = o;
-
-                container.innerHTML += `
-                <div class="start-card" style="margin-bottom:10px; cursor:pointer; padding:15px; border-left:4px solid var(--brand)" onclick="app.selectRec(${i})">
-                    <div style="font-weight:bold; font-size:16px">${o.name} (${o.desc})</div>
-                    <div class="rec-price" style="color:var(--brand)">${BRL(o.price)}</div>
-                </div>`;
-            });
-        }
-        
+        opts.forEach((o, i) => {
+            if(!app.tempRecOptions) app.tempRecOptions = []; app.tempRecOptions[i] = o;
+            container.innerHTML += `<div class="start-card" style="margin-bottom:10px; cursor:pointer; padding:15px; border-left:4px solid var(--brand)" onclick="app.selectRec(${i})"><div style="font-weight:bold; font-size:16px">${o.name} (${o.desc})</div><div class="rec-price" style="color:var(--brand)">${BRL(o.price)}</div></div>`;
+        });
         modal.classList.remove('hidden');
     },
-
-    selectRec(idx) {
-        this.selectedAlbum = app.tempRecOptions[idx];
-        document.getElementById('modalAlbumRec').classList.add('hidden');
-        this.showUpsellModal();
-    },
-    
+    selectRec(idx) { this.selectedAlbum = app.tempRecOptions[idx]; document.getElementById('modalAlbumRec').classList.add('hidden'); this.showUpsellModal(); },
     showUpsellModal() { document.getElementById('modalUpsell').classList.remove('hidden'); },
     switchToAvulso() { document.getElementById('modalUpsell').classList.add('hidden'); this.setMode('avulso'); this.idx=0; this.load(); },
-    
     goToSummary() {
         const avulsoData = this.calcTotalAvulso();
-        let albumTotal = 0;
-        let albumName = "";
-
+        let albumTotal = 0; let albumName = "";
         if(this.albumConfig.incluso > 0) {
             const albumCount = this.sel.filter(x=>x.inAlbum).length;
             const extra = Math.max(0, albumCount - this.albumConfig.incluso);
             albumTotal = extra * this.albumConfig.extra;
-            albumName = `Fotolivro (Pacote)`;
-            if(extra > 0) albumName += ` + ${extra} fotos extras`;
+            albumName = `Fotolivro (Pacote)`; if(extra > 0) albumName += ` + ${extra} fotos extras`;
         } else if(this.selectedAlbum) {
-            albumTotal = this.selectedAlbum.price;
-            albumName = this.selectedAlbum.name;
+            albumTotal = this.selectedAlbum.price; albumName = this.selectedAlbum.name;
         }
-
         const subtotal = avulsoData.total + albumTotal - avulsoData.discount;
         const final = subtotal - this.entrada;
-
+        
         let html = '';
         if(albumName) html += `<div class="receipt-line"><div><strong>${albumName}</strong></div><div>${BRL(albumTotal)}</div></div>`;
-
         Object.entries(avulsoData.summary).forEach(([nm, qtd]) => {
-            let prd = this.produtos.find(p=>p.nome===nm);
-            let unit = prd ? prd.preco : 0;
+            let prd = this.produtos.find(p=>p.nome===nm); let unit = prd ? prd.preco : 0;
             html += `<div class="receipt-line"><div><strong>${qtd}x ${nm}</strong><div style="font-size:11px;color:#666">${BRL(unit)} un.</div></div><div>${BRL(unit*qtd)}</div></div>`;
         });
-
         if(avulsoData.discount > 0) html += `<div class="receipt-line" style="color:var(--brand)"><strong>Desconto (Créditos)</strong><strong>-${BRL(avulsoData.discount)}</strong></div>`;
         if(this.entrada > 0) html += `<div class="receipt-line receipt-entry"><span>Entrada Paga:</span> <span>-${BRL(this.entrada)}</span></div>`;
-
+        
         let labelFinal = final < 0 ? "CRÉDITO SOBRANDO:" : "TOTAL A PAGAR:";
         let valFinal = final < 0 ? BRL(Math.abs(final)) : BRL(final);
         let colorFinal = final < 0 ? "var(--brand)" : "#000";
-
         html += `<div style="text-align:right; font-size:22px; margin-top:15px; color:${colorFinal}; border-top:2px solid #333; padding-top:10px"><small style="font-size:12px; color:#666; display:block">${labelFinal}</small>${valFinal}</div>`;
 
         let txt = `*📝 PEDIDO STUDIO NBV*\n----------------------------------\n`;
         if(albumName) txt += `📚 *${albumName}*: ${BRL(albumTotal)}\n\n`;
-
         let report = {};
         this.sel.forEach((s, i) => {
             if(s.isRemoved) return;
             let fname = this.fotos[i].split('/').pop();
             Object.entries(s.extras).forEach(([prodName, qtd]) => {
-                if(qtd > 0) {
-                    report[prodName] = report[prodName] || [];
-                    report[prodName].push(qtd > 1 ? `${fname}(${qtd}x)` : fname);
-                }
+                if(qtd > 0) { report[prodName] = report[prodName] || []; report[prodName].push(qtd > 1 ? `${fname}(${qtd}x)` : fname); }
             });
         });
-
         for (let [prodName, fileList] of Object.entries(report)) {
             let totalQtd = avulsoData.summary[prodName] || 0;
             txt += `*📌 ${prodName} (${totalQtd} un)*\n${fileList.join(', ')}\n\n`;
         }
-
         txt += `----------------------------------\n`;
         txt += `*💰 FINANCEIRO*\n`;
         txt += `Total Geral: ${BRL(subtotal + this.entrada)}\n`; 
@@ -534,8 +466,7 @@ const app = {
         document.getElementById('summaryContent').innerHTML = html;
         document.getElementById('btnWhats').href = `https://wa.me/5542998370150?text=${encodeURIComponent(txt)}`;
     },
-
-    calcTotalAvulso() {
+    calcTotalAvulso() { /* Mesma lógica anterior */ 
         let total = 0, itemsCount = 0, summary = {};
         this.sel.forEach(s => {
             if(s.isRemoved) return;

@@ -1,7 +1,7 @@
 // Config Studio NBV
 const DB_CONFIG = {
     "album": {
-        "incluso": 30,
+        "incluso": null,
         "extra": 15
     },
     "calculo": {

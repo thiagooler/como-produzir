@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Studio NBV • V25 Multi-Deploy</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <title>Painel Studio NBV • V27 Python Ready</title>
     <script src="database.js"></script>
     <style>
-        :root { --brand: #2da44e; --netlify: #00ad9f; --bg: #f6f8fa; --card: #ffffff; --border: #d0d7de; --text: #24292f; --accent: #0969da; --danger: #cf222e; }
+        :root { --brand: #2da44e; --python: #3776ab; --bg: #f6f8fa; --card: #ffffff; --border: #d0d7de; --text: #24292f; --accent: #0969da; --danger: #cf222e; }
         body { font-family: -apple-system, monospace; background: var(--bg); color: var(--text); padding: 20px; max-width: 900px; margin: 0 auto; }
         .card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 15px; overflow: hidden; }
         .card-header { padding: 15px; background: #f6f8fa; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 600; user-select: none; }
@@ -17,13 +16,13 @@
         
         .btn { padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px; border: none; font-size: 14px; transition: .2s; }
         .btn:hover { opacity: 0.9; transform: scale(1.01); }
-        .btn-github { background: var(--brand); color: #fff; }
-        .btn-netlify { background: var(--netlify); color: #fff; } /* Cor do Netlify */
+        .btn-primary { background: var(--brand); color: #fff; }
+        .btn-python { background: var(--python); color: #fff; } 
+        .btn-copy { background: #333; color: #fff; }
         .btn-save { background: var(--accent); color: #fff; }
         .btn-mini { width: auto; padding: 5px 10px; margin: 0; font-size: 12px; background:#eee; border:1px solid #ccc; cursor:pointer;}
         
         .row { display: flex; gap: 15px; } .col { flex: 1; }
-        
         .mode-selector { display: flex; gap: 10px; margin-bottom: 15px; }
         .mode-opt { flex: 1; padding: 10px; text-align: center; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; background: #eee; font-weight: bold; color: #666; transition: .2s; }
         .mode-opt.active { background: #dafbe1; border-color: var(--brand); color: var(--brand); }
@@ -31,33 +30,29 @@
         .drop-zone { border: 2px dashed var(--border); padding: 40px; text-align: center; background: #fff; cursor: pointer; border-radius: 6px; margin-top:10px; }
         .drop-zone.dragover { background: #dafbe1; border-color: var(--brand); }
         
-        .final-link { background: #ddf4ff; padding: 20px; text-align: center; display: none; margin-top: 20px; border: 1px solid var(--accent); border-radius: 6px; }
-        .final-link a { font-size: 18px; font-weight: bold; color: var(--accent); text-decoration: none; display: block; margin-bottom: 5px; }
-        
         .status-box { margin-top:10px; padding:10px; border-radius:4px; font-weight:bold; display:none; }
         .status-success { background:#e6ffec; border:1px solid #00a000; color:#005000; }
         .status-error { background:#fff0f0; border:1px solid var(--danger); color:var(--danger); }
         .hidden { display: none !important; }
-        
-        .deploy-actions { display: flex; gap: 10px; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
+
+        /* Área de Código Gerado */
+        #codeArea { display:none; margin-top:20px; border-top:1px solid #eee; padding-top:20px; }
+        #htmlOutput { width:100%; height:150px; background:#222; color:#0f0; font-family:monospace; font-size:12px; padding:10px; border-radius:5px; margin-bottom:10px; }
     </style>
 </head>
 <body>
 
-<h1>🚀 Studio NBV • Master V25 (Netlify + GitHub)</h1>
+<h1>🚀 Studio NBV • Master V27 (Python Ready)</h1>
 
 <div class="card">
-    <div class="card-header" onclick="toggle('config', this)">⚙️ Configurações (Tokens) ▼</div>
+    <div class="card-header" onclick="toggle('config', this)">⚙️ Configurações (GitHub) ▼</div>
     <div id="config" class="card-body">
         <label>🔐 GitHub Token</label><input type="password" id="ghToken" onchange="saveConfig()">
         <div class="row">
             <div class="col"><input type="text" id="ghUser" placeholder="User GitHub" onchange="saveConfig()"></div>
             <div class="col"><input type="text" id="ghRepo" placeholder="Repo GitHub" onchange="saveConfig()"></div>
         </div>
-        <hr>
-        <label>⚡ Netlify Access Token</label>
-        <input type="password" id="netToken" placeholder="Token do Netlify" onchange="saveConfig()">
-        <small style="color:#666">Crie em User Settings > Applications > New Access Token</small>
+        <small>Necessário para salvar preços e fazer upload de fotos (se usar modo PC).</small>
     </div>
 </div>
 
@@ -113,15 +108,19 @@
         <div id="giftDisplay" style="margin-top:10px; display:flex; gap:5px; flex-wrap:wrap"></div>
         <div class="row"><div class="col"><label>Sinal Pago (R$)</label><input type="number" id="valEntrada" value="0"></div></div>
 
-        <div class="deploy-actions">
-            <button class="btn btn-github" id="btnGh" onclick="deploy('github')">🚀 GitHub (Lento)</button>
-            <button class="btn btn-netlify" id="btnNet" onclick="deploy('netlify')">⚡ Netlify (Rápido)</button>
+        <button class="btn btn-python" id="btnGen" onclick="generateHTML()">🔨 GERAR CÓDIGO HTML</button>
+        
+        <div id="codeArea">
+            <h3 style="margin-top:0">Código Pronto:</h3>
+            <textarea id="htmlOutput" readonly></textarea>
+            <div class="row">
+                <div class="col"><button class="btn btn-copy" onclick="copyCode()">📋 Copiar Código</button></div>
+                <div class="col"><button class="btn btn-primary" onclick="downloadFile()">⬇️ Baixar index.html</button></div>
+            </div>
         </div>
-        <div id="statusDeploy" style="text-align:center; margin-top:10px; font-weight:bold; color:#666"></div>
+
     </div>
 </div>
-
-<div id="finalLink" class="final-link"></div>
 
 <script>
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzUz4P79a9JJyX6lxncPhcoDBtuwuTf5VThBbE0VfZ9IhoP5ODPhTg6qFvz-ImchbbH/exec";
@@ -129,7 +128,7 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbzUz4P79a9JJyX6lxncPhco
 let clientGifts=[], selectedFiles=[], drivePhotos=[], currentMode='drive';
 
 window.onload=()=>{
-    ['ghToken','ghUser','ghRepo','netToken'].forEach(k=>{if(localStorage.getItem(k))document.getElementById(k).value=localStorage.getItem(k)});
+    ['ghToken','ghUser','ghRepo'].forEach(k=>{if(localStorage.getItem(k))document.getElementById(k).value=localStorage.getItem(k)});
     if(typeof DB_CONFIG!=='undefined'){
         document.getElementById('visualList').innerHTML='';
         DB_CONFIG.produtos.forEach(p=>addProductRow(p.nome,p.preco));
@@ -155,8 +154,7 @@ function setMode(m){
 }
 function addProductRow(n,p){ let d=document.createElement('div');d.className='prod-row';d.style.marginBottom='5px';d.innerHTML=`<input type="text" class="inp-name" value="${n}" style="width:60%"><input type="number" class="inp-price" value="${p}" style="width:25%"><button class="btn-mini btn-danger" onclick="this.parentElement.remove()" style="width:10%">X</button>`;document.getElementById('visualList').appendChild(d); }
 function addGift(){ let s=document.getElementById('giftSelector'), q=document.getElementById('giftQtd'); if(!s.value)return; clientGifts.push({nome:s.value,qtd:parseInt(q.value)}); document.getElementById('giftDisplay').innerHTML+=`<span style="background:#0969da;color:white;padding:4px 8px;border-radius:12px;font-size:12px">${q.value}x ${s.value}</span>`; }
-function saveConfig(){ ['ghToken','ghUser','ghRepo','netToken'].forEach(k=>localStorage.setItem(k,document.getElementById(k).value)); }
-
+function saveConfig(){ ['ghToken','ghUser','ghRepo'].forEach(k=>localStorage.setItem(k,document.getElementById(k).value)); }
 function handleFiles(f){ selectedFiles=Array.from(f); document.getElementById('statusUpload').style.display='block'; document.getElementById('statusUpload').innerText=`✅ ${selectedFiles.length} Fotos Locais Prontas`; }
 function autoExtractId() { let input=document.getElementById('folderLink').value; let match=input.match(/[-\w]{25,}/); document.getElementById('folderId').value = match ? match[0] : input; }
 
@@ -176,8 +174,8 @@ async function fetchDrive(){
     finally { btn.disabled=false; btn.innerText="🔍 1. Verificar Pasta"; }
 }
 
-// --- FUNÇÃO DE DEPLOY CENTRAL ---
-async function deploy(target){
+// --- GERADOR DE CÓDIGO HTML ---
+async function generateHTML(){
     let rawName=document.getElementById('clientName').value.trim();
     if(!rawName) return alert("Nome do cliente obrigatório.");
     
@@ -190,24 +188,21 @@ async function deploy(target){
         if(!selectedFiles.length) return alert("Selecione fotos.");
     }
 
-    // Configurações Comuns
     let user=document.getElementById('ghUser').value;
     let repo=document.getElementById('ghRepo').value;
     let uniqueId = Math.random().toString(36).substring(2, 6);
     let urlName = rawName.toLowerCase().replace(/[^a-z0-9-]/g,'-') + '-' + uniqueId;
     
-    // UI Bloqueio
-    let btnGh=document.getElementById('btnGh'); let btnNet=document.getElementById('btnNet');
-    let status=document.getElementById('statusDeploy');
-    btnGh.disabled=true; btnNet.disabled=true; 
-    status.innerText = target === 'github' ? "Enviando para GitHub..." : "Enviando para Netlify...";
+    let btnGen=document.getElementById('btnGen');
+    btnGen.disabled=true; btnGen.innerText="Processando...";
 
     try {
-        // 1. Se for UPLOAD, envia as imagens para o GitHub SEMPRE (Netlify não aguenta upload picado fácil via API simples)
-        // Se o usuário escolher Upload + Netlify, as imagens ficam no GitHub e o HTML no Netlify.
+        // Se for upload, PRECISA mandar pro GitHub primeiro pra ter link
         if(currentMode === 'upload'){
             let ghToken=document.getElementById('ghToken').value;
-            status.innerText = "Subindo fotos para GitHub...";
+            if(!ghToken) return alert("Para upload local, preciso do Token do GitHub.");
+            
+            btnGen.innerText = "Subindo fotos para GitHub...";
             let uploadedNames = [];
             for(let i=0; i<selectedFiles.length; i++){
                 let f=selectedFiles[i];
@@ -219,73 +214,46 @@ async function deploy(target){
                     method:'PUT', headers:{Authorization:`token ${ghToken}`},
                     body:JSON.stringify({message:`Img`, content:b64, branch:'main'})
                 });
-                // No modo Netlify+Upload, precisamos da URL COMPLETA da imagem no GitHub
-                if(target === 'netlify') uploadedNames.push(`https://${user}.github.io/${repo}/clientes/${urlName}/${safeName}`);
-                else uploadedNames.push(safeName); 
+                // Gera Link Absoluto para o Netlify conseguir ler
+                uploadedNames.push(`https://${user}.github.io/${repo}/clientes/${urlName}/${safeName}`);
             }
             finalPhotos = uploadedNames;
         }
 
-        // 2. Monta o JSON
         let jsData = {
-            clientName: rawName,
-            fotos: finalPhotos,
-            produtos: DB_CONFIG.produtos,
-            creditos: clientGifts,
+            clientName: rawName, fotos: finalPhotos, produtos: DB_CONFIG.produtos, creditos: clientGifts,
             entrada: parseFloat(document.getElementById('valEntrada').value)||0,
             albumConfig: { incluso: parseFloat(document.getElementById('dbIncluso').value)||0, extra: parseFloat(document.getElementById('dbExtra').value)||0 },
             calculoConfig: DB_CONFIG.calculo
         };
 
-        // 3. Monta o HTML (Ajustando caminhos se for Netlify)
-        let basePath = target === 'netlify' ? `https://${user}.github.io/${repo}` : `../..`;
-        
+        // Usa Caminho ABSOLUTO para o CSS e JS no GitHub
+        let basePath = `https://${user}.github.io/${repo}`;
         let html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="referrer" content="no-referrer"><title>${rawName}</title><link rel="stylesheet" href="${basePath}/style.css"></head><body><script>const CLIENT_DATA = ${JSON.stringify(jsData, null, 2)};<\/script><script src="${basePath}/engine.js"><\/script></body></html>`;
 
-        // 4. ENVIO FINAL
-        if(target === 'github'){
-            let ghToken=document.getElementById('ghToken').value;
-            status.innerText = "Salvando HTML no GitHub...";
-            await fetch(`https://api.github.com/repos/${user}/${repo}/contents/clientes/${urlName}/index.html`,{
-                method:'PUT', headers:{Authorization:`token ${ghToken}`},
-                body:JSON.stringify({message:`Galeria ${rawName}`, content:btoa(unescape(encodeURIComponent(html))), branch:'main'})
-            });
-            showFinalLink(`https://${user}.github.io/${repo}/clientes/${urlName}/`, rawName, 'GitHub');
-        } 
-        else if (target === 'netlify'){
-            let netToken=document.getElementById('netToken').value;
-            if(!netToken) throw new Error("Token Netlify não configurado.");
-            
-            status.innerText = "Criando site no Netlify...";
-            
-            // Cria ZIP em memória com index.html
-            let zip = new JSZip();
-            zip.file("index.html", html);
-            let zipContent = await zip.generateAsync({type:"blob"});
-
-            // Envia para API Netlify
-            let res = await fetch("https://api.netlify.com/api/v1/sites", {
-                method: "POST",
-                headers: { "Authorization": `Bearer ${netToken}`, "Content-Type": "application/zip" },
-                body: zipContent
-            });
-            
-            if(!res.ok) throw new Error("Erro Netlify: " + res.statusText);
-            let json = await res.json();
-            
-            // Sucesso
-            showFinalLink(json.url, rawName, 'Netlify');
-        }
-
-    } catch(e){ alert("Erro: "+e.message); status.innerText="Erro!"; }
-    finally { btnGh.disabled=false; btnNet.disabled=false; }
+        // MOSTRA O RESULTADO
+        document.getElementById('codeArea').style.display = 'block';
+        document.getElementById('htmlOutput').value = html;
+        
+    } catch(e){ alert("Erro: "+e.message); }
+    finally { btnGen.disabled=false; btnGen.innerText="🔨 GERAR CÓDIGO HTML"; }
 }
 
-function showFinalLink(url, name, type){
-    let div = document.getElementById('finalLink');
-    div.style.display='block';
-    div.innerHTML += `<a href="${url}" target="_blank">✅ ${name} (${type})</a>`;
-    document.getElementById('statusDeploy').innerText = "Concluído!";
+function copyCode(){
+    let txt = document.getElementById('htmlOutput');
+    txt.select();
+    document.execCommand('copy');
+    alert("Código copiado!");
+}
+
+function downloadFile(){
+    let txt = document.getElementById('htmlOutput').value;
+    if(!txt) return;
+    let blob = new Blob([txt], {type: "text/html"});
+    let a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "index.html";
+    a.click();
 }
 
 async function savePricesToGitHub(){

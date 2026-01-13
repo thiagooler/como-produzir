@@ -1,4 +1,6 @@
-/* ARQUIVO: engine.js - Lógica Central V31 (Botão no Final) */
+/* ARQUIVO: engine.js - Lógica Central V32 (Correção Drive + Cache Buster) */
+
+console.log("✅ ENGINE V32 CARREGADO COM SUCESSO!"); // Isso ajuda a saber se atualizou
 
 const BRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const cleanName = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -53,7 +55,7 @@ const BASE_HTML = `
     <div class="gallery-grid">
         <div class="photo-area" id="photoArea">
             <button class="nav-btn nav-left" onclick="app.nav(-1)">❮</button>
-            <img id="imgMain" src="">
+            <img id="imgMain" src="" onerror="this.src='https://via.placeholder.com/800x600?text=Erro+Carregar+Foto'">
             <div id="statusOverlay" class="status-overlay"></div>
             <button class="nav-btn nav-right" onclick="app.nav(1)">❯</button>
             <div style="position:absolute; bottom:15px; background:rgba(255,255,255,0.9); padding:4px 10px; border-radius:20px; font-size:12px; font-weight:bold" id="imgName"></div>
@@ -221,7 +223,7 @@ const app = {
         this.showUpsellModal();
     },
 
-    // --- NAV E LOAD (AQUI ESTÁ A LÓGICA DO BOTÃO) ---
+    // --- NAV E LOAD (AQUI ESTÁ A MÁGICA HÍBRIDA) ---
     nav(d) {
         const s = this.sel[this.idx];
         if (d === 1 && this.mode === 'avulso') {
@@ -233,27 +235,29 @@ const app = {
     },
     
     load() {
-        // LÓGICA HÍBRIDA (Aceita tanto texto simples quanto objeto do Drive)
         const item = this.fotos[this.idx];
         let url = "", name = "";
 
+        // DETECÇÃO AUTOMÁTICA: É STRING (ANTIGO) OU OBJETO (DRIVE)?
         if (typeof item === 'string') {
-            // Modo Antigo (Upload ou String simples)
             url = item;
             name = item.split('/').pop();
         } else {
-            // Modo Novo (Drive - Objeto)
             url = item.url;
             name = item.name;
         }
 
-        document.getElementById('imgMain').src = url;
-        document.getElementById('imgName').innerText = name; // Agora exibe o nome limpo!
+        const imgEl = document.getElementById('imgMain');
+        // Reseta o src para evitar mostrar foto velha enquanto carrega a nova
+        imgEl.style.opacity = '0.5';
+        imgEl.src = url;
+        imgEl.onload = () => { imgEl.style.opacity = '1'; };
+
+        document.getElementById('imgName').innerText = name;
         document.getElementById('counter').innerText = `${this.idx + 1} / ${this.fotos.length}`;
         
-        this.updateUI(); // <--- CORRIGIDO: Mantém o nome original do seu engine.js
+        this.updateUI();
         
-        // Botão Finalizar apenas na última foto
         const isLast = this.idx === this.fotos.length - 1;
         const btn = document.getElementById('btnFooterFinish');
         if (isLast) btn.classList.remove('hidden');
@@ -400,6 +404,8 @@ const app = {
     },
     showUpsellModal() { document.getElementById('modalUpsell').classList.remove('hidden'); },
     switchToAvulso() { document.getElementById('modalUpsell').classList.add('hidden'); this.setMode('avulso'); this.idx=0; this.load(); },
+    
+    // --- GERAÇÃO DO RESUMO (CORRIGIDO PARA DRIVE) ---
     goToSummary() {
         const avulsoData = this.calcTotalAvulso();
         let albumTotal = 0; let albumName = "";
@@ -431,13 +437,20 @@ const app = {
         let txt = `*📝 PEDIDO STUDIO NBV*\n----------------------------------\n`;
         if(albumName) txt += `📚 *${albumName}*: ${BRL(albumTotal)}\n\n`;
         let report = {};
+        
+        // --- LOOP CORRIGIDO PARA NOMES DO DRIVE ---
         this.sel.forEach((s, i) => {
             if(s.isRemoved) return;
-            let fname = this.fotos[i].split('/').pop();
+            // AQUI ESTAVA O ERRO ANTES!
+            let item = this.fotos[i];
+            let fname = (typeof item === 'string') ? item.split('/').pop() : item.name;
+            
             Object.entries(s.extras).forEach(([prodName, qtd]) => {
                 if(qtd > 0) { report[prodName] = report[prodName] || []; report[prodName].push(qtd > 1 ? `${fname}(${qtd}x)` : fname); }
             });
         });
+        // ------------------------------------------
+
         for (let [prodName, fileList] of Object.entries(report)) {
             let totalQtd = avulsoData.summary[prodName] || 0;
             txt += `*📌 ${prodName} (${totalQtd} un)*\n${fileList.join(', ')}\n\n`;

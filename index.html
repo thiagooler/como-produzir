@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Studio NBV • V23 Híbrido</title>
+    <title>Painel Studio NBV • V24 (Correção Drive)</title>
     <script src="database.js"></script>
     <style>
         :root { --brand: #2da44e; --bg: #f6f8fa; --card: #ffffff; --border: #d0d7de; --text: #24292f; --accent: #0969da; --danger: #cf222e; }
@@ -20,7 +20,6 @@
         .btn-mini { width: auto; padding: 5px 10px; margin: 0; font-size: 12px; background:#eee; border:1px solid #ccc; cursor:pointer;}
         .row { display: flex; gap: 15px; } .col { flex: 1; }
         
-        /* Abas de Modo */
         .mode-selector { display: flex; gap: 10px; margin-bottom: 15px; }
         .mode-opt { flex: 1; padding: 10px; text-align: center; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; background: #eee; font-weight: bold; color: #666; transition: .2s; }
         .mode-opt.active { background: #dafbe1; border-color: var(--brand); color: var(--brand); }
@@ -31,17 +30,16 @@
         
         .final-link { background: #ddf4ff; padding: 20px; text-align: center; display: none; margin-top: 20px; border: 1px solid var(--accent); border-radius: 6px; }
         .final-link a { font-size: 18px; font-weight: bold; color: var(--accent); text-decoration: none; }
-        .final-link a:hover { text-decoration: underline; }
-        .hidden { display: none !important; }
         
         .status-box { margin-top:10px; padding:10px; border-radius:4px; font-weight:bold; display:none; }
         .status-success { background:#e6ffec; border:1px solid #00a000; color:#005000; }
         .status-error { background:#fff0f0; border:1px solid var(--danger); color:var(--danger); }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-<h1>🚀 Studio NBV • Master V23 (Auto-Link)</h1>
+<h1>🚀 Studio NBV • Master V24</h1>
 
 <div class="card">
     <div class="card-header" onclick="toggle('config', this)">⚙️ Configurações (GitHub) ▼</div>
@@ -51,7 +49,7 @@
             <div class="col"><input type="text" id="ghUser" placeholder="User" onchange="saveConfig()"></div>
             <div class="col"><input type="text" id="ghRepo" placeholder="Repo" onchange="saveConfig()"></div>
         </div>
-        </div>
+    </div>
 </div>
 
 <div class="card" style="border-left: 4px solid #0969da;">
@@ -79,16 +77,13 @@
         
         <label style="margin-top:15px; display:block">Origem das Fotos:</label>
         <div class="mode-selector">
-            <div class="mode-opt active" onclick="setMode('drive')" id="tabDrive">☁️ Google Drive (Rápido)</div>
-            <div class="mode-opt" onclick="setMode('upload')" id="tabUpload">📁 Upload PC (Seguro)</div>
+            <div class="mode-opt active" onclick="setMode('drive')" id="tabDrive">☁️ Google Drive</div>
+            <div class="mode-opt" onclick="setMode('upload')" id="tabUpload">📁 Upload PC</div>
         </div>
 
         <div id="areaDrive">
-            <input type="text" id="folderLink" placeholder="Cole o Link da Pasta do Drive (ou ID) aqui..." oninput="autoExtractId()">
-            <small style="color:#666">Pode colar o link completo de compartilhamento.</small>
-            
+            <input type="text" id="folderLink" placeholder="Link da Pasta do Drive (Qualquer pessoa com link)..." oninput="autoExtractId()">
             <input type="hidden" id="folderId">
-            
             <button class="btn" style="background:#FFD04B; color:#333; margin-top:10px" onclick="fetchDrive()" id="btnFetch">🔍 1. Verificar Pasta</button>
             <div id="statusDrive" class="status-box"></div>
         </div>
@@ -119,7 +114,6 @@
 <div id="finalLink" class="final-link"></div>
 
 <script>
-// SEU SCRIPT DO GOOGLE SALVO AQUI:
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzUz4P79a9JJyX6lxncPhcoDBtuwuTf5VThBbE0VfZ9IhoP5ODPhTg6qFvz-ImchbbH/exec";
 
 let clientGifts=[], selectedFiles=[], drivePhotos=[], currentMode='drive';
@@ -155,105 +149,66 @@ function saveConfig(){ ['ghToken','ghUser','ghRepo'].forEach(k=>localStorage.set
 
 function handleFiles(f){ selectedFiles=Array.from(f); document.getElementById('statusUpload').style.display='block'; document.getElementById('statusUpload').innerText=`✅ ${selectedFiles.length} Fotos Locais Prontas`; }
 
-// --- EXTRAI ID DO LINK COLADO ---
 function autoExtractId() {
     let input = document.getElementById('folderLink').value;
     let idBox = document.getElementById('folderId');
-    
-    // Tenta achar padrões de ID do Drive
     let match = input.match(/[-\w]{25,}/); 
-    if(match) {
-        idBox.value = match[0];
-        // Opcional: Mostra visualmente que achou
-        // document.getElementById('folderLink').style.borderColor = "#2da44e";
-    } else {
-        idBox.value = input; // Se não achar padrão, assume que o usuário digitou só o ID
-    }
+    if(match) idBox.value = match[0]; else idBox.value = input;
 }
 
 async function fetchDrive(){
-    // Garante que o ID foi extraído
     autoExtractId();
     let fid = document.getElementById('folderId').value.trim();
-    
     if(!fid) return alert("Cole o link da pasta primeiro.");
-    
-    let btn=document.getElementById('btnFetch'); 
-    let status=document.getElementById('statusDrive');
-    
-    btn.disabled=true; btn.innerText="Buscando...";
-    status.style.display='none'; status.className = 'status-box';
-
+    let btn=document.getElementById('btnFetch'); let status=document.getElementById('statusDrive');
+    btn.disabled=true; btn.innerText="Buscando..."; status.style.display='none';
     try {
         let res=await fetch(`${GAS_URL}?folderId=${fid}`);
         let data=await res.json();
-        
         if(Array.isArray(data)){
-            if(data.length === 0) {
-                status.style.display='block';
-                status.className = 'status-box status-error';
-                status.innerText = "⚠️ Pasta vazia ou permissão negada. Verifique se está 'Qualquer pessoa com link'.";
-            } else {
-                drivePhotos=data; 
-                status.style.display='block';
-                status.className = 'status-box status-success';
-                status.innerHTML = `✅ <strong>${data.length} fotos</strong> encontradas no Drive!`;
-            }
-        } else {
-            throw new Error(data);
-        }
-    } catch(e){
-        status.style.display='block';
-        status.className = 'status-box status-error';
-        status.innerText = "Erro ao buscar: "+e.message;
-    } finally {
-        btn.disabled=false; btn.innerText="🔍 1. Verificar Pasta";
-    }
+            if(data.length === 0) { status.style.display='block'; status.className='status-box status-error'; status.innerText="⚠️ Pasta vazia."; } 
+            else { drivePhotos=data; status.style.display='block'; status.className='status-box status-success'; status.innerHTML=`✅ <strong>${data.length} fotos</strong> encontradas!`; }
+        } else throw new Error(data);
+    } catch(e){ status.style.display='block'; status.className='status-box status-error'; status.innerText="Erro: "+e.message; }
+    finally { btn.disabled=false; btn.innerText="🔍 1. Verificar Pasta"; }
 }
 
 async function deploy(){
     let token=document.getElementById('ghToken').value, user=document.getElementById('ghUser').value, repo=document.getElementById('ghRepo').value;
     let rawName=document.getElementById('clientName').value.trim();
+    if(!rawName) return alert("Nome do cliente obrigatório.");
     
-    if(!rawName) return alert("Digite o nome do cliente.");
-    
-    // Define quais fotos usar baseado no modo
     let finalPhotos = [];
     if(currentMode === 'drive'){
-        if(!drivePhotos.length) return alert("Busque as fotos no Drive primeiro (Botão 1).");
-        finalPhotos = drivePhotos;
+        if(!drivePhotos.length) return alert("Busque as fotos no Drive primeiro.");
+        finalPhotos = drivePhotos; // Agora envia OBJETOS {name, url}
     } else {
-        if(!selectedFiles.length) return alert("Selecione fotos para upload.");
-        // Será preenchido na lógica de upload
+        if(!selectedFiles.length) return alert("Selecione fotos.");
+        // Upload não é o foco do erro, mantemos lógica simplificada
     }
 
     let uniqueId = Math.random().toString(36).substring(2, 6);
     let urlName = rawName.toLowerCase().replace(/[^a-z0-9-]/g,'-') + '-' + uniqueId;
-    
-    let btn=document.getElementById('btnDeploy'); btn.disabled=true; btn.innerText="⏳ Criando Galeria...";
+    let btn=document.getElementById('btnDeploy'); btn.disabled=true; btn.innerText="Processando...";
     
     try {
-        // --- LOGICA DE UPLOAD (MODO PC) ---
         if(currentMode === 'upload'){
             let uploadedNames = [];
             for(let i=0; i<selectedFiles.length; i++){
                 let f=selectedFiles[i];
                 document.getElementById('progFill').style.width=((i/selectedFiles.length)*90)+'%';
-                
                 let reader=new FileReader();
                 let b64=await new Promise(r=>{reader.onload=()=>r(reader.result.split(',')[1]);reader.readAsDataURL(f)});
                 let safeName = f.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-                
                 await fetch(`https://api.github.com/repos/${user}/${repo}/contents/clientes/${urlName}/${safeName}`,{
                     method:'PUT', headers:{Authorization:`token ${token}`},
-                    body:JSON.stringify({message:`Img ${i+1}`, content:b64, branch:'main'})
+                    body:JSON.stringify({message:`Img`, content:b64, branch:'main'})
                 });
-                uploadedNames.push(safeName);
+                uploadedNames.push(safeName); // No modo upload, salvamos apenas a string do nome, pois a URL é relativa
             }
             finalPhotos = uploadedNames;
         }
 
-        // --- MONTAGEM DOS DADOS ---
         let jsData = {
             clientName: rawName,
             fotos: finalPhotos,
@@ -264,20 +219,20 @@ async function deploy(){
             calculoConfig: DB_CONFIG.calculo
         };
 
-        // HTML final
-        let html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${rawName}</title><link rel="stylesheet" href="../../style.css"></head><body><script>const CLIENT_DATA = ${JSON.stringify(jsData, null, 2)};<\/script><script src="../../engine.js"><\/script></body></html>`;
+        // AQUI ESTÁ O TRUQUE PARA A FOTO NÃO QUEBRAR: meta referrer="no-referrer"
+        let html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="referrer" content="no-referrer"><title>${rawName}</title><link rel="stylesheet" href="../../style.css"></head><body><script>const CLIENT_DATA = ${JSON.stringify(jsData, null, 2)};<\/script><script src="../../engine.js"><\/script></body></html>`;
         
         await fetch(`https://api.github.com/repos/${user}/${repo}/contents/clientes/${urlName}/index.html`,{
             method:'PUT', headers:{Authorization:`token ${token}`},
-            body:JSON.stringify({message:`Galeria ${rawName} (${currentMode})`, content:btoa(unescape(encodeURIComponent(html))), branch:'main'})
+            body:JSON.stringify({message:`Galeria ${rawName}`, content:btoa(unescape(encodeURIComponent(html))), branch:'main'})
         });
 
         document.getElementById('finalLink').style.display='block';
-        document.getElementById('finalLink').innerHTML=`<a href="https://${user}.github.io/${repo}/clientes/${urlName}/" target="_blank">✅ ABRIR GALERIA DE ${rawName.toUpperCase()}</a>`;
+        document.getElementById('finalLink').innerHTML=`<a href="https://${user}.github.io/${repo}/clientes/${urlName}/" target="_blank">✅ ABRIR GALERIA</a>`;
         if(currentMode==='upload') document.getElementById('progFill').style.width='100%';
 
-    } catch(e){ alert("Erro Fatal: "+e.message); }
-    finally { btn.disabled=false; btn.innerText="🚀 2. CRIAR GALERIA"; }
+    } catch(e){ alert("Erro: "+e.message); }
+    finally { btn.disabled=false; btn.innerText="🚀 CRIAR GALERIA"; }
 }
 
 async function savePricesToGitHub(){

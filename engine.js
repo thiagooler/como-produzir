@@ -233,13 +233,27 @@ const app = {
     },
     
     load() {
-        const url = this.fotos[this.idx];
+        // LÓGICA HÍBRIDA (Aceita tanto texto simples quanto objeto do Drive)
+        const item = this.fotos[this.idx];
+        let url = "", name = "";
+
+        if (typeof item === 'string') {
+            // Modo Antigo (Upload ou String simples)
+            url = item;
+            name = item.split('/').pop();
+        } else {
+            // Modo Novo (Drive - Objeto)
+            url = item.url;
+            name = item.name;
+        }
+
         document.getElementById('imgMain').src = url;
-        document.getElementById('imgName').innerText = url.split('/').pop();
+        document.getElementById('imgName').innerText = name; // Agora exibe o nome limpo!
         document.getElementById('counter').innerText = `${this.idx + 1} / ${this.fotos.length}`;
-        this.updateUI();
         
-        // --- LÓGICA DO BOTÃO VISÍVEL SÓ NA ÚLTIMA FOTO ---
+        this.updateUI(); // <--- CORRIGIDO: Mantém o nome original do seu engine.js
+        
+        // Botão Finalizar apenas na última foto
         const isLast = this.idx === this.fotos.length - 1;
         const btn = document.getElementById('btnFooterFinish');
         if (isLast) btn.classList.remove('hidden');
